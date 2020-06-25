@@ -35,6 +35,23 @@ app.get('/notifications/v2/:name', (req, res)=>{
     
 });
 
+app.get('/notifications/v3/:names', (req, res)=>{
+  let names = req.params.names.split(",");
+  
+  let response = Object.create(null);
+
+  for (let name of names){
+    if (queue.indexOf(name) === -1){
+      queue.push(name);
+    }
+
+    response[name] =  notifications[name] != undefined? notifications[name]: -1;
+  }
+  
+  res.json(response);
+  
+});
+
 setInterval(function(){
   if (queue.length > 0 && reqsPerSecond <= 9){
     let name = queue.shift();
@@ -42,7 +59,6 @@ setInterval(function(){
     axios.get('https://api.scratch.mit.edu/users/' + name + '/messages/count?'+ Date.now().toString())
     .then(response => {
       notifications[name] = response.data.count;
-      console.log(`Request for ${name} has been processed`)
     })
   }
 }, 150);
