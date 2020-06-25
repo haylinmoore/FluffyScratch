@@ -3,6 +3,7 @@ const app = express()
 const port = 3000
 const axios = require('axios');
 
+var longestQueue = 0;
 var reqsPerSecond = 0;
 var queue = [];
 var notifications = Object.create(null);
@@ -53,6 +54,12 @@ app.get('/notifications/v3/:names', (req, res)=>{
 });
 
 setInterval(function(){
+
+  if (queue.length > longestQueue){
+    longestQueue = queue.length;
+    console.log(`Longest queue length is ${longestQueue} at ${new Date()}`)
+  }
+
   if (queue.length > 0 && reqsPerSecond <= 9){
     let name = queue.shift();
     reqsPerSecond++;
