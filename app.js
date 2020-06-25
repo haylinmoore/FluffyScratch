@@ -4,6 +4,8 @@ const port = 3000
 const axios = require('axios');
 
 var reqsPerSecond = 0;
+var queue = [];
+var notifications = {};
 
 app.use(function(req, res, next) {
     res.header("Access-Control-Allow-Origin", "*"); // update to match the domain you will make the request from
@@ -22,6 +24,28 @@ app.get('/notifications/v1/:name', (req, res)=>{
     res.status(429).send('The server has gotten to many requests this second');
   }
 });
+
+app.get('/notifications/v2/:name', (req, res)=>{
+    let name = req.params.name;
+    if (queue.indexOf(name) === -1){
+      queue.push(name);
+    }
+    
+    res.json({count: notifications[name] != undefined? notifications[name]: -1});
+    
+});
+
+setInterval(function(){
+  if (queue.length > 0 && reqsPerSecond <= 9){
+    let name = queue.shift();
+    reqsPerSecond++;
+    axios.get('https://api.scratch.mit.edu/users/' + name + '/messages/count?'+ Date.now().toString())
+    .then(response => {
+      notifications[name] = response.data.count;
+      console.log(`Request for ${name} has been processed`)
+    })
+  }
+}, 150);
 
 setInterval(function(){
   reqsPerSecond = 0;
