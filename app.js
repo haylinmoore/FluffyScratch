@@ -36,7 +36,6 @@ app.get('/metrics', (req, res)=>{
 scratch_proxy_request_total ${analytics.totalReqs} ${timestamp}
 
 # HELP scratch_proxy_queue_since The amount of additions to the queue since the last time prometheus checked
-# TYPE scratch_proxy_queue_since counter
 scratch_proxy_queue_since ${analytics.queueSizeSinceLast} ${timestamp}
 
 # HELP scratch_proxy_longest_queue The longest queue
@@ -102,7 +101,7 @@ setInterval(function(){
       notifications[name] = response.data.count;
     })
   }
-}, 150);
+}, 100);
 
 function queuePush(name){
   analytics.queueSizeSinceLast++;
