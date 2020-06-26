@@ -16,6 +16,10 @@ app.use(function(req, res, next) {
 
 app.get('/', (req, res) => res.send('If you do not know what this is you should not be here <3'))
 
+app.get('/maxqueue/v1/', (req, res)=> {
+  res.json({longestQueue});
+});
+
 app.get('/notifications/v1/:name', (req, res)=>{
   if (reqsPerSecond <= 9){
     axios.get('https://api.scratch.mit.edu/users/' + req.params.name + '/messages/count?'+ Date.now().toString())
