@@ -1,16 +1,17 @@
 {
-  "name": "scratchproxy",
-  "version": "1.0.0",
-  "description": "",
-  "main": "app.js",
-  "scripts": {
-    "start": "node app.js"
-  },
-  "author": "Hampton Moore",
-  "license": "MIT",
-  "dependencies": {
-    "axios": "^0.19.2",
-    "express": "^4.17.1",
-    "node-fetch": "^2.6.0"
-  }
+	"name": "scratchproxy",
+	"version": "1.0.0",
+	"description": "",
+	"main": "app.js",
+	"scripts": {
+		"start": "node app.js",
+		"deploy": "sudo docker build . -t 'registry.voyager1.hampton.pw/scratchproxy' && sudo docker push 'registry.voyager1.hampton.pw/scratchproxy'"
+	},
+	"author": "Hampton Moore",
+	"license": "MIT",
+	"dependencies": {
+		"axios": "^0.19.2",
+		"express": "^4.17.1",
+		"node-fetch": "^2.6.0"
+	}
 }
