@@ -1,6 +1,7 @@
 FROM node:10-alpine3.9 as npmpackages
 WORKDIR /app
 COPY package.json .
+COPY package-lock.json .
 RUN npm install
 
 FROM node:10-alpine3.9
