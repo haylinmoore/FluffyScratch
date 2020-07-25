@@ -1,0 +1,60 @@
+<html>
+	<head>
+		<title>FluffyScratch Auth</title>
+		<link
+			rel="stylesheet"
+			href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"
+		/>
+		<style>
+			.nav-wrapper,
+			.btn,
+			.btn-large {
+				background-color: #4d97ff !important;
+			}
+		</style>
+	</head>
+	<body>
+		<nav>
+			<div class="nav-wrapper">
+				<a href="#" class="brand-logo center"
+					>FluffyScratch Authentication</a
+				>
+			</div>
+		</nav>
+		<div class="container">
+			<h4>
+				Hello, to login as the user "{{username}}" please copy the
+				following number "{{publicCode}}". <br />
+				Now click the button below labeled "Visit Project" to visit a
+				Scratch Project. <br />
+				Once there paste the previously copied number and submit.
+				<br />When you are back here press the other button labeled "I
+				have finished". <br /><br />
+				<a
+					class="btn btn-large"
+					target="_blank"
+					id="visit"
+					href="https://scratch.mit.edu/projects/413751680/"
+					onclick="document.getElementById('finished').classList.remove('disabled');document.getElementById('visit').classList.add('disabled');"
+					>Visit Project</a
+				>
+				<a
+					class="btn btn-large disabled"
+					id="finished"
+					href="https://{{redirectLocation}}?username={{username}}&publicCode={{publicCode}}&privateCode={{privateCode}}&redirectLocation={{redirectLocationB64}}"
+					>I have finished</a
+				>
+			</h4>
+			<br /><br /><br />
+			<h5>
+				FluffyScratch was made with ♥ by
+				<a href="https://hamptonmoore.com" target="_blank">Hampton</a>
+			</h5>
+			<h6>
+				Disclaimer: FluffyScratch and its many services are in no way
+				owned, operated, or endoresed by Scratch or any members of the
+				Scratch Team
+			</h6>
+		</div>
+	</body>
+</html>

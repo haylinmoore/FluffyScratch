@@ -1,18 +1,21 @@
 const express = require("express");
 const app = express();
+const fs = require("fs");
 const port = 3000;
 const fetch = require("node-fetch");
 const low = require("lowdb");
 const FileSync = require("lowdb/adapters/FileSync");
-const adapter = new FileSync("db.json");
-const db = low(adapter);
 
 // Magic Number Definitions
 const QUEUE_REQUEST_TIMEOUT = 100; // Wait 100ms between using the queue
 const EMPHERAL_DATA_SAVE = 1000 * 60; // Save Empheral data every 60s
 const ONLINE_CUTOFF_TIME = 1000 * 60 * 1; // Users are online if they pinged within a minute
+const AUTH_CLOUD_PROJECT = 413751680; // The scratch project that handles OAuth
 
 // Set some defaults (required if your JSON file is empty)
+const adapter = new FileSync("db.json");
+const db = low(adapter);
+
 db.defaults({
 	users: {},
 	analytics: {
@@ -29,6 +32,7 @@ let empheralData = {
 	requestsToScratch: 0,
 	totalRequests: 0,
 	inNotificationQueue: [],
+	auth: Object.create(null),
 };
 
 function createUser(data) {
@@ -80,7 +84,11 @@ function addQueue(type, data) {
 			queues.push(queueItem);
 			break;
 		case QUEUE_TYPES.CloudDataVerification:
-			queues.unshift(queueItem);
+			let promise = new Promise((resolve, reject) => {
+				queueItem.resolve = resolve;
+				queues.unshift(queueItem);
+			});
+			return promise;
 			break;
 		default:
 			throw `ILLEGAL QUEUE TYPE OF ${type}`;
@@ -114,6 +122,14 @@ setInterval(() => {
 				1
 			);
 			break;
+		case QUEUE_TYPES.CloudDataVerification:
+			fetch(
+				`https://clouddata.scratch.mit.edu/logs?projectid=${AUTH_CLOUD_PROJECT}&limit=10&offset=0`
+			)
+				.then((response) => response.json())
+				.then((data) => {
+					latestQueue.resolve(data);
+				});
 
 		case undefined:
 			break;
@@ -141,6 +157,83 @@ app.use(function (req, res, next) {
 app.get("/", (req, res) =>
 	res.send("If you do not know what this is you should not be here <3")
 );
+
+app.get("/auth/noRef", (req, res) => {
+	res.send(
+		'If you are seeing this it means the a site tried to use the FluffyScratch Auth but forgot to send it a "redirect" query. Please yell at them not me'
+	);
+});
+
+app.get(
+	"/auth/verify/v1/:username/:publicCode/:privateCode/:redirectLocation",
+	(req, res) => {
+		req.params.redirectLocation = Buffer.from(
+			req.params.redirectLocation,
+			"base64"
+		).toString("utf-8");
+
+		if (empheralData.auth[req.params.username]) {
+			if (
+				JSON.stringify(req.params) ==
+				JSON.stringify(empheralData.auth[req.params.username])
+			) {
+				addQueue(QUEUE_TYPES.CloudDataVerification, {
+					username: req.params.username,
+					publicCode: req.params.publicCode,
+					res: res,
+				}).then((data) => {
+					for (let cloudItem of data) {
+						if (
+							cloudItem.user == req.params.username &&
+							cloudItem.value == req.params.publicCode
+						) {
+							res.json(true);
+							return;
+						}
+					}
+					res.json(false);
+				});
+			} else {
+				res.json(false);
+			}
+
+			if (
+				req.params.redirectLocation ===
+				empheralData.auth[req.params.username].redirectLocation
+			) {
+				delete empheralData.auth[req.params.username];
+			}
+		} else {
+			res.json(false);
+		}
+	}
+);
+
+app.get("/auth/getKeys/v1/:username", (req, res) => {
+	req.query.redirect =
+		req.query.redirect || "Zmx1ZmZ5c2NyYXRjaC5oYW1wdG9uLnB3L2F1dGgvbm9SZWY"; // If no redirect send them to fluffyscratch.hampton.pw/auth/noRef
+	const pageData = {
+		username: req.params.username,
+		publicCode: Math.round(Math.random() * 100000).toString(), // Turns Math.random into a relativly small number
+		privateCode: (Math.random() * 100000000000000000).toString(), // Magic number that makes a Math.random an Integer
+		redirectLocation: Buffer.from(req.query.redirect, "base64").toString(
+			"utf-8"
+		),
+	};
+
+	fs.readFile("./pages/auth.html", "utf8", function (err, data) {
+		if (err) throw err;
+		for (let item in pageData) {
+			data = data.replace(new RegExp(`{{${item}}}`, "g"), pageData[item]);
+		}
+		data = data.replace(
+			new RegExp(`{{redirectLocationB64}}`, "g"),
+			req.query.redirect
+		);
+		empheralData.auth[pageData.username] = pageData;
+		res.send(data);
+	});
+});
 
 app.get("/notifications/v2/:username", (req, res) => {
 	let username = req.params.username;
