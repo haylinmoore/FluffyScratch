@@ -29,8 +29,8 @@ db.defaults({
 let empheralData = {
 	queueAdditions: 0, // No point in saving in the database as it resets every 5 seconds
 	// Saves the metric below to the database every minute
-	requestsToScratch: 0,
-	totalRequests: 0,
+	requestsToScratch: db.get("analytics.requestsToScratch").value(),
+	totalRequests: db.get("analytics.totalRequests").value(),
 	inNotificationQueue: [],
 	auth: Object.create(null),
 };
@@ -160,7 +160,7 @@ app.get("/", (req, res) =>
 
 app.get("/auth/noRef", (req, res) => {
 	res.send(
-		'If you are seeing this it means the a site tried to use the FluffyScratch Auth but forgot to send it a "redirect" query. Please yell at them not me'
+		'If you are seeing this it means the a site tried to use the FluffyScratch Auth but forgot to send it a "redirect" query. Please yell at them and not me'
 	);
 });
 
@@ -172,40 +172,40 @@ app.get(
 			"base64"
 		).toString("utf-8");
 
-		if (empheralData.auth[req.params.username]) {
-			if (
-				JSON.stringify(req.params) ==
-				JSON.stringify(empheralData.auth[req.params.username])
-			) {
-				addQueue(QUEUE_TYPES.CloudDataVerification, {
-					username: req.params.username,
-					publicCode: req.params.publicCode,
-					res: res,
-				}).then((data) => {
-					for (let cloudItem of data) {
-						if (
-							cloudItem.user == req.params.username &&
-							cloudItem.value == req.params.publicCode
-						) {
-							res.json(true);
-							return;
-						}
-					}
-					res.json(false);
-				});
-			} else {
-				res.json(false);
-			}
-
-			if (
-				req.params.redirectLocation ===
-				empheralData.auth[req.params.username].redirectLocation
-			) {
-				delete empheralData.auth[req.params.username];
-			}
-		} else {
+		// Return false if there is nothing saved about the user on Auth
+		if (!empheralData.auth[req.params.username]) {
 			res.json(false);
+			return;
 		}
+
+		if (
+			JSON.stringify(req.params) !=
+			JSON.stringify(empheralData.auth[req.params.username])
+		) {
+			res.json(false);
+			return;
+		}
+
+		// We are done with the empheralData Auth so delete it
+		delete empheralData.auth[req.params.username];
+
+		// Make a Queue item for CloudDataVerification
+		addQueue(QUEUE_TYPES.CloudDataVerification, {
+			username: req.params.username,
+			publicCode: req.params.publicCode,
+			res: res,
+		}).then((data) => {
+			for (let cloudItem of data) {
+				if (
+					cloudItem.user == req.params.username &&
+					cloudItem.value == req.params.publicCode
+				) {
+					res.json(true);
+					return;
+				}
+			}
+			res.json(false);
+		});
 	}
 );
 
@@ -221,17 +221,20 @@ app.get("/auth/getKeys/v1/:username", (req, res) => {
 		),
 	};
 
-	fs.readFile("./pages/auth.html", "utf8", function (err, data) {
+	fs.readFile("./pages/auth.html", "utf8", function (err, authPageHTML) {
 		if (err) throw err;
 		for (let item in pageData) {
-			data = data.replace(new RegExp(`{{${item}}}`, "g"), pageData[item]);
+			authPageHTML = authPageHTML.replace(
+				new RegExp(`{{${item}}}`, "g"),
+				pageData[item]
+			);
 		}
-		data = data.replace(
+		authPageHTML = authPageHTML.replace(
 			new RegExp(`{{redirectLocationB64}}`, "g"),
 			req.query.redirect
 		);
 		empheralData.auth[pageData.username] = pageData;
-		res.send(data);
+		res.send(authPageHTML);
 	});
 });
 
