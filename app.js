@@ -156,6 +156,8 @@ app.use(function (req, res, next) {
 	}
 });
 
+app.use("/static", express.static("static"));
+
 app.get("/", (req, res) =>
 	res.send("If you do not know what this is you should not be here <3")
 );
