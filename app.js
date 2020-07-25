@@ -310,9 +310,9 @@ function getActiveUsers() {
 		.value();
 }
 
-app.get("/showusers/v1/hiddenkey6940", (req, res) => {
-	res.json(getActiveUsers());
-});
+// app.get("/showusers/v1/", (req, res) => {
+// 	res.json(getActiveUsers());
+// });
 
 app.get("/metrics", (req, res) => {
 	let timestamp = new Date().getTime();
