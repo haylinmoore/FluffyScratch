@@ -1,22 +1,130 @@
 const express = require("express");
 const app = express();
 const port = 3000;
-const axios = require("axios");
 const fetch = require("node-fetch");
+const low = require("lowdb");
+const FileSync = require("lowdb/adapters/FileSync");
+const adapter = new FileSync("db.json");
+const db = low(adapter);
 
-var reqsPerSecond = 0;
-var queue = [];
-var notifications = Object.create(null);
+// Magic Number Definitions
+const QUEUE_REQUEST_TIMEOUT = 100; // Wait 100ms between using the queue
+const EMPHERAL_DATA_SAVE = 1000 * 60; // Save Empheral data every 60s
+const ONLINE_CUTOFF_TIME = 1000 * 60 * 1; // Users are online if they pinged within a minute
 
-var analytics = {
-	longestQueue: 0,
-	totalReqs: 0,
-	reqsToScratch: 0,
-	queueSizeSinceLast: 0,
-	referrers: new Map(),
-	users: new Map(),
-	queues: 0,
+// Set some defaults (required if your JSON file is empty)
+db.defaults({
+	users: {},
+	analytics: {
+		totalRequests: 0,
+		requestsToScratch: 0,
+	},
+}).write();
+
+// Ephemeral data
+
+let empheralData = {
+	queueAdditions: 0, // No point in saving in the database as it resets every 5 seconds
+	// Saves the metric below to the database every minute
+	requestsToScratch: 0,
+	totalRequests: 0,
+	inNotificationQueue: [],
 };
+
+function createUser(data) {
+	if (!data.hasOwnProperty("username")) {
+		throw "CreateUser: requires a username";
+	}
+	return {
+		username: data.username || "",
+		id: data.id || -1,
+		lastKeepAlive: data.lastKeepAlive || 0,
+		messages: data.messages || -1,
+	};
+}
+
+function updateUser(username, newData) {
+	let user = db.get(`users.${username}`);
+
+	if (user.value() === undefined) {
+		db.set(
+			`users.${username}`,
+			createUser({ ...newData, username: username })
+		).write();
+	} else {
+		db.set(`users.${username}`, {
+			...user.value(),
+			...newData,
+		}).write();
+	}
+}
+
+function getUserItem(username, item) {
+	return db.get(`users.${username}.${item}`).value();
+}
+
+const QUEUE_TYPES = {
+	Notifications: 0,
+	CloudDataVerification: 1,
+};
+
+let queues = [];
+
+function addQueue(type, data) {
+	const queueItem = { type: type, data: data };
+
+	empheralData.queueAdditions++;
+
+	switch (type) {
+		case QUEUE_TYPES.Notifications:
+			queues.push(queueItem);
+			break;
+		case QUEUE_TYPES.CloudDataVerification:
+			queues.unshift(queueItem);
+			break;
+		default:
+			throw `ILLEGAL QUEUE TYPE OF ${type}`;
+	}
+}
+
+setInterval(() => {
+	let latestQueue = queues.shift();
+
+	if (latestQueue == undefined) {
+		return;
+	}
+
+	switch (latestQueue.type) {
+		case QUEUE_TYPES.Notifications:
+			fetch(
+				`https://api.scratch.mit.edu/users/${latestQueue.data.username}/messages/count`
+			)
+				.then((response) => response.json())
+				.then((data) => {
+					updateUser(latestQueue.data.username, {
+						messages: data.count,
+					});
+				});
+			empheralData.requestsToScratch++;
+			// Remove the user from the inNotificationQueue
+			empheralData.inNotificationQueue.splice(
+				empheralData.inNotificationQueue.indexOf(
+					latestQueue.data.username
+				),
+				1
+			);
+			break;
+
+		case undefined:
+			break;
+	}
+}, QUEUE_REQUEST_TIMEOUT);
+
+setInterval(() => {
+	db.set("analytics.totalRequests", empheralData.totalRequests)
+		.set("analytics.requestsToScratch", empheralData.requestsToScratch)
+		.write();
+}, EMPHERAL_DATA_SAVE);
 
 app.use(function (req, res, next) {
 	res.header("Access-Control-Allow-Origin", "*"); // update to match the domain you will make the request from
@@ -26,16 +134,7 @@ app.use(function (req, res, next) {
 	);
 	next();
 	if (req.originalUrl != "/metrics") {
-		analytics.totalReqs++;
-		let ref = req.get("Referrer") || "https://localhost";
-		ref = ref.split("://")[1].split("/")[0];
-
-		let val = 1;
-		if (analytics.referrers.has(ref)) {
-			val = analytics.referrers.get(ref) + 1;
-		}
-
-		analytics.referrers.set(ref, val);
+		empheralData.totalRequests++;
 	}
 });
 
@@ -43,170 +142,101 @@ app.get("/", (req, res) =>
 	res.send("If you do not know what this is you should not be here <3")
 );
 
-app.get("/maxqueue/v1/", (req, res) => {
-	res.json({ longestQueue: analytics.longestQueue });
+app.get("/notifications/v2/:username", (req, res) => {
+	let username = req.params.username;
+
+	updateUser(username, { lastKeepAlive: new Date().valueOf() });
+
+	if (!empheralData.inNotificationQueue.includes(username)) {
+		addQueue(QUEUE_TYPES.Notifications, {
+			username: username,
+		});
+		empheralData.inNotificationQueue.push(username);
+	}
+
+	res.json({
+		count: getUserItem(username, "messages"),
+	});
 });
 
-const getActiveUsers = () => {
-	let currentDate = new Date().valueOf();
-	const cutoff = 1000 * 60 * 1;
+app.get("/profilepicture/v1/:username", (req, res) => {
+	let userID = getUserItem(req.params.username, "id");
 
-	return Array.from(analytics.users.entries())
+	if (userID === -1) {
+		fetch("https://scratchdb.lefty.one/v2/user/info/" + req.params.username)
+			.then((response) => response.json())
+			.then((data) => {
+				res.redirect(
+					301,
+					`https://cdn2.scratch.mit.edu/get_image/user/${data.id}_60x60.png`
+				);
+				updateUser(req.params.username, { id: data.id });
+			})
+			.catch((err) => {
+				res.send("brrrr");
+			});
+	} else {
+		res.redirect(
+			301,
+			`https://cdn2.scratch.mit.edu/get_image/user/${userID}_60x60.png`
+		);
+	}
+});
+
+function getActiveUsers() {
+	const currentDate = new Date().valueOf();
+
+	return db
+		.get(`users`)
 		.filter((data) => {
-			return currentDate - data[1] < cutoff;
+			return currentDate - data.lastKeepAlive < ONLINE_CUTOFF_TIME;
 		})
 		.map((data) => {
-			return data[0];
-		});
-};
+			return data.username;
+		})
+		.value();
+}
 
 app.get("/showusers/v1/hiddenkey6940", (req, res) => {
 	res.json(getActiveUsers());
 });
 
-app.get("/profilepicture/v1/:username", (req, res) => {
-	fetch("https://scratchdb.lefty.one/v2/user/info/" + req.params.username)
-		.then((response) => response.json())
-		.then((data) => {
-			res.redirect(
-				301,
-				`https://cdn2.scratch.mit.edu/get_image/user/${data.id}_60x60.png`
-			);
-		})
-		.catch((err) => {
-			res.send("brrrr");
-		});
-});
-
 app.get("/metrics", (req, res) => {
 	let timestamp = new Date().getTime();
+
+	let analytics = db.get(`analytics`).value();
+	let users = db.get(`users`).value();
 
 	let metricData = `
 # HELP scratch_proxy_request_total The total number of HTTP requests.
 # TYPE scratch_proxy_request_total counter
-scratch_proxy_request_total ${analytics.totalReqs} ${timestamp}
-
+scratch_proxy_request_total ${empheralData.totalRequests} ${timestamp}
 # HELP scratch_proxy_queue_since The amount of additions to the queue since the last time prometheus checked
-scratch_proxy_queue_since ${analytics.queueSizeSinceLast} ${timestamp}
-
-# HELP scratch_proxy_longest_queue The longest queue
-scratch_proxy_longest_queue ${analytics.longestQueue} ${timestamp}
-
-# HELP scratch_proxy_queues_total The total queues
-# TYPE scratch_proxy_queues_total counter
-scratch_proxy_queues_total ${analytics.queues} ${timestamp}
-
+scratch_proxy_queue_since ${empheralData.queueAdditions} ${timestamp}
 # HELP scratch_proxy_users_served Total users served
 # TYPE scratch_proxy_users_served counter
-scratch_proxy_users_served ${analytics.users.size} ${timestamp}
-
+scratch_proxy_users_served ${Object.keys(users).length} ${timestamp}
 # HELP scratch_proxy_active_users Total active users
 # TYPE scratch_proxy_active_users gauge
 scratch_proxy_active_users ${getActiveUsers().length} ${timestamp}
-
+# HELP scratch_proxy_queued_users Queued Users
+# TYPE scratch_proxy_queued_users gauge
+scratch_proxy_queued_users ${
+		empheralData.inNotificationQueue.length
+	} ${timestamp}
 # HELP scratch_proxy_reqs_to_scratch Total requests to Scratch
 # TYPE scratch_proxy_reqs_to_scratch counter
-scratch_proxy_reqs_to_scratch ${analytics.reqsToScratch} ${timestamp}
-
-# HELP scratch_proxy_referrers Shows reqs by referrer
-# TYPE scratch_proxy_referrers counter`;
-
-	for (const [site, reqs] of analytics.referrers.entries()) {
-		metricData += `\nscratch_proxy_referrers{site="${site}"} ${reqs} ${timestamp}`;
-	}
+scratch_proxy_reqs_to_scratch ${empheralData.requestsToScratch} ${timestamp}
+`;
 
 	res.send(metricData);
 
-	analytics.queueSizeSinceLast = 0;
+	empheralData.queueAdditions = 0;
 });
 
-app.get("/notifications/v1/:name", (req, res) => {
-	res.json({
-		error:
-			"This API endpoint has become deprecated, please switch to v2. Note that v2 requires a much more frequent requests around one every five seconds and returns a -1 until it has gotten and cached the users message count",
-	});
-	// if (reqsPerSecond <= 9) {
-	// 	axios
-	// 		.get(
-	// 			"https://api.scratch.mit.edu/users/" +
-	// 				req.params.name +
-	// 				"/messages/count?" +
-	// 				Date.now().toString()
-	// 		)
-	// 		.then((response) => res.json(response.data));
-	// 	reqsPerSecond++;
-	// } else {
-	// 	res.status(429).send(
-	// 		"The server has gotten to many requests this second"
-	// 	);
-	// }
+app.get("/showqueue", (req, res) => {
+	res.json(JSON.stringify(queues));
 });
-
-app.get("/notifications/v2/:name", (req, res) => {
-	let name = req.params.name;
-
-	analytics.users.set(name, new Date().valueOf());
-
-	if (queue.indexOf(name) === -1) {
-		queuePush(name);
-	}
-
-	res.json({
-		count: notifications[name] != undefined ? notifications[name] : -1,
-	});
-});
-
-app.get("/notifications/v3/:names", (req, res) => {
-	let names = req.params.names.split(",");
-
-	let response = Object.create(null);
-
-	for (let name of names) {
-		if (queue.indexOf(name) === -1) {
-			queuePush(name);
-		}
-
-		response[name] =
-			notifications[name] != undefined ? notifications[name] : -1;
-	}
-
-	res.json(response);
-});
-
-setInterval(function () {
-	if (queue.length > analytics.longestQueue) {
-		analytics.longestQueue = queue.length;
-		console.log(
-			`Longest queue length is ${analytics.longestQueue} at ${new Date()}`
-		);
-	}
-
-	if (queue.length > 0 && reqsPerSecond <= 9) {
-		let name = queue.shift();
-		reqsPerSecond++;
-		analytics.reqsToScratch++;
-		axios
-			.get(
-				"https://api.scratch.mit.edu/users/" +
-					name +
-					"/messages/count?" +
-					Date.now().toString()
-			)
-			.then((response) => {
-				notifications[name] = response.data.count;
-			});
-	}
-}, 100);
-
-function queuePush(name) {
-	analytics.queueSizeSinceLast++;
-	analytics.queues++;
-	queue.push(name);
-}
-
-setInterval(function () {
-	reqsPerSecond = 0;
-}, 1000);
 
 app.listen(port, () =>
 	console.log(`Example app listening at http://localhost:${port}`)

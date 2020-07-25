@@ -10,8 +10,8 @@
 	"author": "Hampton Moore",
 	"license": "MIT",
 	"dependencies": {
-		"axios": "^0.19.2",
 		"express": "^4.17.1",
+		"lowdb": "^1.0.0",
 		"node-fetch": "^2.6.0"
 	}
 }
