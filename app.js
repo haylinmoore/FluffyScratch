@@ -166,6 +166,16 @@ app.get("/auth/noRef", (req, res) => {
 	);
 });
 
+app.get("/auth/test", (req, res) => {
+	fetch(
+		`https://fluffyscratch.hampton.pw/auth/verify/v1/${req.query.username}/${req.query.publicCode}/${req.query.privateCode}/${req.query.redirectLocation}`
+	)
+		.then((response) => response.json())
+		.then((data) => {
+			res.send("Authentication result was: " + data);
+		});
+});
+
 app.get(
 	"/auth/verify/v1/:username/:publicCode/:privateCode/:redirectLocation",
 	(req, res) => {
