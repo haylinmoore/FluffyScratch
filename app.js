@@ -130,6 +130,8 @@ setInterval(() => {
 				.then((data) => {
 					latestQueue.resolve(data);
 				});
+			empheralData.requestsToScratch++;
+			break;
 
 		case undefined:
 			break;
@@ -210,8 +212,10 @@ app.get(
 );
 
 app.get("/auth/getKeys/v1/:username", (req, res) => {
-	req.query.redirect =
-		req.query.redirect || "Zmx1ZmZ5c2NyYXRjaC5oYW1wdG9uLnB3L2F1dGgvbm9SZWY"; // If no redirect send them to fluffyscratch.hampton.pw/auth/noRef
+	if (!req.query.redirect) {
+		req.query.redirect = "Zmx1ZmZ5c2NyYXRjaC5oYW1wdG9uLnB3L2F1dGgvbm9SZWY"; // If no redirect send them to fluffyscratch.hampton.pw/auth/noRef
+	}
+
 	const pageData = {
 		username: req.params.username,
 		publicCode: Math.round(Math.random() * 100000).toString(), // Turns Math.random into a relativly small number
@@ -229,10 +233,12 @@ app.get("/auth/getKeys/v1/:username", (req, res) => {
 				pageData[item]
 			);
 		}
+
 		authPageHTML = authPageHTML.replace(
 			new RegExp(`{{redirectLocationB64}}`, "g"),
 			req.query.redirect
 		);
+
 		empheralData.auth[pageData.username] = pageData;
 		res.send(authPageHTML);
 	});
@@ -258,25 +264,26 @@ app.get("/notifications/v2/:username", (req, res) => {
 app.get("/profilepicture/v1/:username", (req, res) => {
 	let userID = getUserItem(req.params.username, "id");
 
-	if (userID === -1) {
-		fetch("https://scratchdb.lefty.one/v2/user/info/" + req.params.username)
-			.then((response) => response.json())
-			.then((data) => {
-				res.redirect(
-					301,
-					`https://cdn2.scratch.mit.edu/get_image/user/${data.id}_60x60.png`
-				);
-				updateUser(req.params.username, { id: data.id });
-			})
-			.catch((err) => {
-				res.send("brrrr");
-			});
-	} else {
+	if (userID !== -1) {
 		res.redirect(
 			301,
 			`https://cdn2.scratch.mit.edu/get_image/user/${userID}_60x60.png`
 		);
+		return;
 	}
+
+	fetch("https://scratchdb.lefty.one/v2/user/info/" + req.params.username)
+		.then((response) => response.json())
+		.then((data) => {
+			res.redirect(
+				301,
+				`https://cdn2.scratch.mit.edu/get_image/user/${data.id}_60x60.png`
+			);
+			updateUser(req.params.username, { id: data.id });
+		})
+		.catch((err) => {
+			res.send("brrrr");
+		});
 });
 
 function getActiveUsers() {
@@ -328,10 +335,6 @@ scratch_proxy_reqs_to_scratch ${empheralData.requestsToScratch} ${timestamp}
 	res.send(metricData);
 
 	empheralData.queueAdditions = 0;
-});
-
-app.get("/showqueue", (req, res) => {
-	res.json(JSON.stringify(queues));
 });
 
 app.listen(port, () =>
