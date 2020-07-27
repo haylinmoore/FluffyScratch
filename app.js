@@ -69,7 +69,8 @@ function getUserItem(username, item) {
 
 const QUEUE_TYPES = {
 	Notifications: 0,
-	CloudDataVerification: 1,
+	NotificationsPromise: 1,
+	CloudDataVerification: 2,
 };
 
 let queues = [];
@@ -83,12 +84,19 @@ function addQueue(type, data) {
 		case QUEUE_TYPES.Notifications:
 			queues.push(queueItem);
 			break;
-		case QUEUE_TYPES.CloudDataVerification:
-			let promise = new Promise((resolve, reject) => {
+		case QUEUE_TYPES.NotificationsPromise:
+			return new Promise((resolve, reject) => {
 				queueItem.resolve = resolve;
+				queueItem.type = QUEUE_TYPES.Notifications;
 				queues.unshift(queueItem);
 			});
-			return promise;
+			break;
+		case QUEUE_TYPES.CloudDataVerification:
+			return new Promise((resolve, reject) => {
+				queueItem.resolve = resolve;
+				queueItem.reject = reject;
+				queues.unshift(queueItem);
+			});
 			break;
 		default:
 			throw `ILLEGAL QUEUE TYPE OF ${type}`;
@@ -109,9 +117,21 @@ setInterval(() => {
 			)
 				.then((response) => response.json())
 				.then((data) => {
+					if (data.code === "NotFound") {
+						data.count = 0;
+					}
+
 					updateUser(latestQueue.data.username, {
 						messages: data.count,
 					});
+					if (latestQueue.resolve) {
+						latestQueue.resolve(data.count);
+					}
+				})
+				.catch((err) => {
+					if (latestQueue.reject) {
+						latestQueue.reject(0);
+					}
 				});
 			empheralData.requestsToScratch++;
 			// Remove the user from the inNotificationQueue
@@ -261,15 +281,36 @@ app.get("/notifications/v2/:username", (req, res) => {
 
 	updateUser(username, { lastKeepAlive: new Date().valueOf() });
 
-	if (!empheralData.inNotificationQueue.includes(username)) {
+	let queuePosition = empheralData.inNotificationQueue.indexOf(username);
+
+	if (queuePosition === -1) {
+		// Lets see if we have any cached message count
+		if (getUserItem(username, "messages") === -1) {
+			// If not lets make a notification queue where we put them in the front of the line
+			addQueue(QUEUE_TYPES.NotificationsPromise, {
+				username: username,
+			}).then((messageCount) => {
+				res.send({
+					count: messageCount,
+					timeout: 1000, // Just wait a second before making your next request, lots of love thx
+					firstTime: true,
+				});
+			});
+			return;
+		}
+
+		// Otherwise lets do a normal notification
+
 		addQueue(QUEUE_TYPES.Notifications, {
 			username: username,
 		});
 		empheralData.inNotificationQueue.push(username);
+		queuePosition = empheralData.inNotificationQueue.indexOf(username);
 	}
 
 	res.json({
 		count: getUserItem(username, "messages"),
+		timeout: queuePosition * 100 + 1500,
 	});
 });
 
