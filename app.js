@@ -3,6 +3,7 @@ const app = express();
 const fs = require("fs");
 const port = 3000;
 const fetch = require("node-fetch");
+const cheerio = require("cheerio");
 const low = require("lowdb");
 const FileSync = require("lowdb/adapters/FileSync");
 
@@ -23,6 +24,12 @@ db.defaults({
 		requestsToScratch: 0,
 	},
 }).write();
+
+// String replaceAll
+String.prototype.replaceAll = function (search, replacement) {
+	var target = this;
+	return target.replace(new RegExp(search, "g"), replacement);
+};
 
 // Ephemeral data
 
@@ -71,6 +78,7 @@ const QUEUE_TYPES = {
 	Notifications: 0,
 	NotificationsPromise: 1,
 	CloudDataVerification: 2,
+	ProfileCommentCollector: 3,
 };
 
 let queues = [];
@@ -92,6 +100,13 @@ function addQueue(type, data) {
 			});
 			break;
 		case QUEUE_TYPES.CloudDataVerification:
+			return new Promise((resolve, reject) => {
+				queueItem.resolve = resolve;
+				queueItem.reject = reject;
+				queues.unshift(queueItem);
+			});
+			break;
+		case QUEUE_TYPES.ProfileCommentCollector:
 			return new Promise((resolve, reject) => {
 				queueItem.resolve = resolve;
 				queueItem.reject = reject;
@@ -147,6 +162,16 @@ setInterval(() => {
 				`https://clouddata.scratch.mit.edu/logs?projectid=${AUTH_CLOUD_PROJECT}&limit=10&offset=0`
 			)
 				.then((response) => response.json())
+				.then((data) => {
+					latestQueue.resolve(data);
+				});
+			empheralData.requestsToScratch++;
+			break;
+		case QUEUE_TYPES.ProfileCommentCollector:
+			fetch(
+				`https://scratch.mit.edu/site-api/comments/user/${latestQueue.data.username}/?page=${latestQueue.data.page}`
+			)
+				.then((response) => response.text())
 				.then((data) => {
 					latestQueue.resolve(data);
 				});
@@ -337,6 +362,62 @@ app.get("/profilepicture/v1/:username", (req, res) => {
 		.catch((err) => {
 			res.send("brrrr");
 		});
+});
+
+const convertCommentToJSON = function (comment, head) {
+	let obj = {
+		username: comment.find("div.name").text().trim(),
+		usernameID: comment
+			.find("img.avatar")
+			.attr("src")
+			.split("user/")[1]
+			.split("_")[0],
+		commentID: comment.attr("data-comment-id"),
+		date: new Date(comment.find("span.time").text()).valueOf(),
+		text: comment
+			.find("div.content")
+			.text()
+			.trim()
+			.replaceAll("\n      \n      \n       ", ""),
+	};
+
+	if (head) {
+		obj.replies = [];
+	} else {
+		obj.parent = comment.find("a.reply").attr("data-parent-thread");
+	}
+
+	return obj;
+};
+
+app.get("/profilecommentstojson/v1/:username/:page", (req, res) => {
+	addQueue(QUEUE_TYPES.ProfileCommentCollector, {
+		username: req.params.username,
+		page: req.params.page,
+	}).then((html) => {
+		const $ = cheerio.load(html);
+		let comments = [];
+
+		$("li.top-level-reply").each(function (index) {
+			let elm = $(this);
+			let headComment = convertCommentToJSON(
+				elm.find("div.comment").first(),
+				true
+			);
+
+			elm.find("ul.replies")
+				.find("div.comment")
+				.each((index, comment) => {
+					headComment.replies.push(
+						convertCommentToJSON($(comment), false)
+					);
+				});
+
+			comments.push(headComment);
+		});
+
+		res.send(comments);
+	});
 });
 
 function getActiveUsers() {
