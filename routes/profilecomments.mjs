@@ -32,10 +32,14 @@ const convertCommentToJSON = function (comment, head) {
 
 const collectCommentsFromProfile = (username, page, callback) => {
 	queue
-		.add(queue.TYPES.ProfileCommentCollector, {
-			username: username,
-			page: page,
-		})
+		.add(
+			queue.TYPES.ProfileCommentCollector,
+			{
+				username: username,
+				page: page,
+			},
+			queue.queues.asap
+		)
 		.then((html) => {
 			const $ = cheerio.load(html);
 			let comments = [];

@@ -55,11 +55,15 @@ router.get(
 
 		// Make a Queue item for CloudDataVerification
 		queue
-			.add(queue.TYPES.CloudDataVerification, {
-				username: req.params.username,
-				publicCode: req.params.publicCode,
-				res: res,
-			})
+			.add(
+				queue.TYPES.CloudDataVerification,
+				{
+					username: req.params.username,
+					publicCode: req.params.publicCode,
+					res: res,
+				},
+				queue.queues.asap
+			)
 			.then((data) => {
 				for (let cloudItem of data) {
 					if (

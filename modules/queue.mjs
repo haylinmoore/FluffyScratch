@@ -1,56 +1,52 @@
 import fetch from "node-fetch";
 import empheralData from "./empheralData.mjs";
-import { QUEUE_REQUEST_TIMEOUT, AUTH_CLOUD_PROJECT } from "./consts.mjs";
+import { QUEUE_ITEMS_PER_SECOND, AUTH_CLOUD_PROJECT } from "./consts.mjs";
 import db from "../modules/db.mjs";
 
-let queue = {};
+let queue = {
+	queues: {
+		// Only 10 queue items can be handled a second
+		asap: [], // Do as many as possible up to 10
+		ehhh: [], // Do up to 7 or till there have been 10 items total
+		idrc: [], // Do however many is you can till it hits 10 items total
+	},
+	queueItemsProcessed: 0,
+	ehhhItemsProcessed: 0,
+};
 
 queue.TYPES = {
 	Notifications: 0,
-	NotificationsPromise: 1,
 	CloudDataVerification: 2,
 	ProfileCommentCollector: 3,
 };
 
-let queues = [];
-
-queue.add = function (type, data) {
+queue.add = function (type, data, placement) {
 	const queueItem = { type: type, data: data };
 
 	empheralData.queueAdditions++;
 
-	switch (type) {
-		case queue.TYPES.Notifications:
-			queues.push(queueItem);
-			break;
-		case queue.TYPES.NotificationsPromise:
-			return new Promise((resolve, reject) => {
-				queueItem.resolve = resolve;
-				queueItem.type = queue.TYPES.Notifications;
-				queues.unshift(queueItem);
-			});
-			break;
-		case queue.TYPES.CloudDataVerification:
-			return new Promise((resolve, reject) => {
-				queueItem.resolve = resolve;
-				queueItem.reject = reject;
-				queues.unshift(queueItem);
-			});
-			break;
-		case queue.TYPES.ProfileCommentCollector:
-			return new Promise((resolve, reject) => {
-				queueItem.resolve = resolve;
-				queueItem.reject = reject;
-				queues.unshift(queueItem);
-			});
-			break;
-		default:
-			throw `ILLEGAL QUEUE TYPE OF ${type}`;
-	}
+	return new Promise((resolve, reject) => {
+		queueItem.resolve = resolve;
+		placement.push(queueItem);
+	});
 };
 
 setInterval(() => {
-	let latestQueue = queues.shift();
+	if (queue.queueItemsProcessed >= QUEUE_ITEMS_PER_SECOND) {
+		queue.queueItemsProcessed = 0;
+		queue.ehhhItemsProcessed = 0;
+	}
+
+	let latestQueue;
+
+	if (queue.queues.asap.length > 0) {
+		latestQueue = queue.queues.asap.shift();
+	} else if (queue.ehhhItemsProcessed < 7 || queue.queues.idrc.length === 0) {
+		latestQueue = queue.queues.ehhh.shift();
+		queue.ehhhItemsProcessed++;
+	} else {
+		latestQueue = queue.queues.idrc.shift();
+	}
 
 	if (latestQueue == undefined) {
 		return;
@@ -59,7 +55,8 @@ setInterval(() => {
 	switch (latestQueue.type) {
 		case queue.TYPES.Notifications:
 			fetch(
-				`https://api.scratch.mit.edu/users/${latestQueue.data.username}/messages/count`
+				`https://api.scratch.mit.edu/users/${latestQueue.data.username}/messages/count?` +
+					Math.random()
 			)
 				.then((response) => response.json())
 				.then((data) => {
@@ -70,18 +67,11 @@ setInterval(() => {
 					db.updateUser(latestQueue.data.username, {
 						messages: data.count,
 					});
-					if (latestQueue.resolve) {
-						latestQueue.resolve(data.count);
-					}
+
+					latestQueue.resolve(data.count);
 				});
 			empheralData.requestsToScratch++;
-			// Remove the user from the inNotificationQueue
-			empheralData.inNotificationQueue.splice(
-				empheralData.inNotificationQueue.indexOf(
-					latestQueue.data.username
-				),
-				1
-			);
+
 			break;
 		case queue.TYPES.CloudDataVerification:
 			fetch(
@@ -107,6 +97,6 @@ setInterval(() => {
 		case undefined:
 			break;
 	}
-}, QUEUE_REQUEST_TIMEOUT);
+}, 1000 / QUEUE_ITEMS_PER_SECOND);
 
 export default queue;

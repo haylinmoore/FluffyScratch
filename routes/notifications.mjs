@@ -1,25 +1,30 @@
 import express from "express";
 import db from "../modules/db.mjs";
 import queue from "../modules/queue.mjs";
+import { QUEUE_ITEMS_PER_SECOND } from "../modules/consts.mjs";
 import empheralData from "../modules/empheralData.mjs";
 
 var router = express.Router();
 
-router.get("/v2/:username", (req, res) => {
-	let username = req.params.username;
-
+const handleNotificationRequest = (res, username, queueType) => {
 	db.updateUser(username, { lastKeepAlive: new Date().valueOf() });
 
-	let queuePosition = empheralData.inNotificationQueue.indexOf(username);
+	let queuePosition = queueType.findIndex((item) => {
+		item.data.username === username;
+	});
 
 	if (queuePosition === -1) {
 		// Lets see if we have any cached message count
 		if (db.getUserItem(username, "messages") === -1) {
 			// If not lets make a notification queue where we put them in the front of the line
 			queue
-				.add(queue.TYPES.NotificationsPromise, {
-					username: username,
-				})
+				.add(
+					queue.TYPES.Notifications,
+					{
+						username: username,
+					},
+					queue.queues.asap
+				)
 				.then((messageCount) => {
 					res.send({
 						count: messageCount,
@@ -35,17 +40,37 @@ router.get("/v2/:username", (req, res) => {
 
 		// Otherwise lets do a normal notification
 
-		queue.add(queue.TYPES.Notifications, {
-			username: username,
-		});
-		empheralData.inNotificationQueue.push(username);
-		queuePosition = empheralData.inNotificationQueue.indexOf(username);
+		queue.add(
+			queue.TYPES.Notifications,
+			{
+				username: username,
+			},
+			queueType
+		);
+
+		queuePosition = queueType.length;
 	}
+	let timeout = queuePosition;
+
+	if (queueType === queue.queues.idrc) {
+		timeout += queue.queues.ehhh.length;
+	}
+
+	timeout *= 1000 / QUEUE_ITEMS_PER_SECOND;
+	timeout += 1500;
 
 	res.json({
 		count: db.getUserItem(username, "messages"),
-		timeout: queuePosition * 100 + 1500,
+		timeout: timeout,
 	});
+};
+
+router.get("/v2/:username", (req, res) => {
+	handleNotificationRequest(res, req.params.username, queue.queues.ehhh);
+});
+
+router.get("/v2/:username/alt", (req, res) => {
+	handleNotificationRequest(res, req.params.username, queue.queues.idrc);
 });
 
 export default router;
