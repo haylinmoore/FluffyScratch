@@ -373,7 +373,7 @@ const convertCommentToJSON = function (comment, head) {
 			.split("user/")[1]
 			.split("_")[0],
 		commentID: comment.attr("data-comment-id"),
-		date: new Date(comment.find("span.time").text()).valueOf(),
+		date: new Date(comment.find("span.time").attr("title")).valueOf(),
 		text: comment
 			.find("div.content")
 			.text()
@@ -390,33 +390,81 @@ const convertCommentToJSON = function (comment, head) {
 	return obj;
 };
 
-app.get("/profilecommentstojson/v1/:username/:page", (req, res) => {
+collectCommentsFromProfile = (username, page, callback) => {
 	addQueue(QUEUE_TYPES.ProfileCommentCollector, {
-		username: req.params.username,
-		page: req.params.page,
-	}).then((html) => {
-		const $ = cheerio.load(html);
-		let comments = [];
+		username: username,
+		page: page,
+	})
+		.then((html) => {
+			const $ = cheerio.load(html);
+			let comments = [];
 
-		$("li.top-level-reply").each(function (index) {
-			let elm = $(this);
-			let headComment = convertCommentToJSON(
-				elm.find("div.comment").first(),
-				true
-			);
+			$("li.top-level-reply").each(function (index) {
+				let elm = $(this);
+				let headComment = convertCommentToJSON(
+					elm.find("div.comment").first(),
+					true
+				);
 
-			elm.find("ul.replies")
-				.find("div.comment")
-				.each((index, comment) => {
-					headComment.replies.push(
-						convertCommentToJSON($(comment), false)
-					);
-				});
+				elm.find("ul.replies")
+					.find("div.comment")
+					.each((index, comment) => {
+						headComment.replies.push(
+							convertCommentToJSON($(comment), false)
+						);
+					});
 
-			comments.push(headComment);
+				comments.push(headComment);
+			});
+
+			callback(comments);
+		})
+		.catch((err) => {
+			callback({ err: err });
 		});
+};
 
-		res.send(comments);
+app.get("/profilecomments/tojson/v1/:username/", (req, res) => {
+	res.redirect(`/profilecomments/tojson/v1/${req.params.username}/1`);
+});
+
+app.get("/profilecomments/tojson/v1/:username/:page", (req, res) => {
+	let { username, page } = req.params;
+
+	if (isNaN(Number(page)) || Number(page) <= 0 || Number(page) >= 68) {
+		res.json({
+			error:
+				"Page number is invalid, page numbers must be a valid number between 1 and 67",
+		});
+		return;
+	}
+
+	collectCommentsFromProfile(username, page, (data) => {
+		res.json(data);
+	});
+});
+
+app.get("/profilecomments/stats/v1/:username/", (req, res) => {
+	const { username } = req.params;
+	collectCommentsFromProfile(username, 1, (comments) => {
+		if (comments.length === 0) {
+			res.json({ err: "User has no comments :(" });
+		}
+		let stats = {
+			username: username,
+		};
+
+		let oldestComment = 10 ** 40;
+		for (let comment of comments) {
+			if (comment.date < oldestComment) {
+				oldestComment = comment.date;
+			}
+		}
+
+		stats.milisecondsPerComment =
+			(new Date().valueOf() - oldestComment) / comments.length;
+
+		res.json(stats);
 	});
 });
 
