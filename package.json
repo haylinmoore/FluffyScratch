@@ -2,9 +2,10 @@
 	"name": "scratchproxy",
 	"version": "1.0.0",
 	"description": "",
+	"type": "module",
 	"main": "app.js",
 	"scripts": {
-		"start": "node app.js",
+		"start": "node --experimental-modules app.mjs",
 		"deploy": "sudo docker build . -t 'registry.voyager1.hampton.pw/scratchproxy' && sudo docker push 'registry.voyager1.hampton.pw/scratchproxy'"
 	},
 	"author": "Hampton Moore",
