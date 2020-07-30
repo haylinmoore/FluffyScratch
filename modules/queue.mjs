@@ -1,6 +1,10 @@
 import fetch from "node-fetch";
 import empheralData from "./empheralData.mjs";
-import { QUEUE_ITEMS_PER_SECOND, AUTH_CLOUD_PROJECT } from "./consts.mjs";
+import {
+	QUEUE_ITEMS_PER_SECOND,
+	AUTH_CLOUD_PROJECT,
+	EHHH_ITEMS_PER_SECOND,
+} from "./consts.mjs";
 import db from "../modules/db.mjs";
 
 let queue = {
@@ -41,12 +45,17 @@ setInterval(() => {
 
 	if (queue.queues.asap.length > 0) {
 		latestQueue = queue.queues.asap.shift();
-	} else if (queue.ehhhItemsProcessed < 7 || queue.queues.idrc.length === 0) {
+	} else if (
+		queue.ehhhItemsProcessed < EHHH_ITEMS_PER_SECOND ||
+		queue.queues.idrc.length === 0
+	) {
 		latestQueue = queue.queues.ehhh.shift();
 		queue.ehhhItemsProcessed++;
 	} else {
 		latestQueue = queue.queues.idrc.shift();
 	}
+
+	queue.queueItemsProcessed++;
 
 	if (latestQueue == undefined) {
 		return;

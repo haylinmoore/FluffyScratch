@@ -1,7 +1,10 @@
 import express from "express";
 import db from "../modules/db.mjs";
 import queue from "../modules/queue.mjs";
-import { QUEUE_ITEMS_PER_SECOND } from "../modules/consts.mjs";
+import {
+	QUEUE_ITEMS_PER_SECOND,
+	EHHH_ITEMS_PER_SECOND,
+} from "../modules/consts.mjs";
 import empheralData from "../modules/empheralData.mjs";
 
 var router = express.Router();
@@ -49,14 +52,16 @@ const handleNotificationRequest = (res, username, queueType) => {
 
 		queuePosition = queueType.length;
 	}
-	let timeout = queuePosition;
+	let timeout = 1500;
 
-	if (queueType === queue.queues.idrc) {
-		timeout += queue.queues.ehhh.length;
+	if (queueType === queue.queues.ehhh) {
+		timeout += queuePosition * (1000 / EHHH_ITEMS_PER_SECOND);
+	} else if (queueType === queue.queues.idrc) {
+		timeout += queue.queues.ehhh.length * (1000 / EHHH_ITEMS_PER_SECOND);
+		timeout +=
+			queuePosition *
+			(1000 / (QUEUE_ITEMS_PER_SECOND - EHHH_ITEMS_PER_SECOND));
 	}
-
-	timeout *= 1000 / QUEUE_ITEMS_PER_SECOND;
-	timeout += 1500;
 
 	res.json({
 		count: db.getUserItem(username, "messages"),
