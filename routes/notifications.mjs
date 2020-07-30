@@ -8,10 +8,9 @@ var router = express.Router();
 
 const handleNotificationRequest = (res, username, queueType) => {
 	db.updateUser(username, { lastKeepAlive: new Date().valueOf() });
-
-	let queuePosition = queueType.findIndex((item) => {
-		item.data.username === username;
-	});
+	let queuePosition = queueType.findIndex(
+		(item) => item.data.username === username
+	);
 
 	if (queuePosition === -1) {
 		// Lets see if we have any cached message count
