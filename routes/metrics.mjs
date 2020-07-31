@@ -1,29 +1,48 @@
 import express from "express";
-import db from "../modules/db.mjs";
-import empheralData from "../modules/empheralData.mjs";
+import { User, Analytic } from "../modules/db.mjs";
+import Sequelize from "sequelize";
+const Op = Sequelize.Op;
 import queue from "../modules/queue.mjs";
-import getActiveUsers from "../modules/getActiveUsers.mjs";
-
+import { ONLINE_CUTOFF_TIME } from "../modules/consts.mjs";
+import empheralData from "../modules/empheralData.mjs";
 var router = express.Router();
 
 router.get("/", (req, res) => {
 	let timestamp = new Date().getTime();
 
-	let analytics = db.get(`analytics`).value();
-	let users = db.get(`users`).value();
+	let userCount = User.count();
+	let requestsToScratch = Analytic.findOne({
+		where: { name: "requestsToScratch" },
+	});
+	let totalRequests = Analytic.findOne({
+		where: { name: "totalRequests" },
+	});
+	let activeUsers = User.count({
+		where: {
+			lastKeepAlive: {
+				[Op.gte]: new Date().valueOf() - ONLINE_CUTOFF_TIME,
+			},
+		},
+	});
 
-	let metricData = `
+	Promise.all([
+		userCount,
+		requestsToScratch,
+		totalRequests,
+		activeUsers,
+	]).then((values) => {
+		let metricData = `
 # HELP scratch_proxy_request_total The total number of HTTP requests.
 # TYPE scratch_proxy_request_total counter
-scratch_proxy_request_total ${empheralData.totalRequests} ${timestamp}
+scratch_proxy_request_total ${values[2].value} ${timestamp}
 # HELP scratch_proxy_queue_since The amount of additions to the queue since the last time prometheus checked
 scratch_proxy_queue_since ${empheralData.queueAdditions} ${timestamp}
 # HELP scratch_proxy_users_served Total users served
 # TYPE scratch_proxy_users_served counter
-scratch_proxy_users_served ${Object.keys(users).length} ${timestamp}
+scratch_proxy_users_served ${values[0]} ${timestamp}
 # HELP scratch_proxy_active_users Total active users
 # TYPE scratch_proxy_active_users gauge
-scratch_proxy_active_users ${getActiveUsers().length} ${timestamp}
+scratch_proxy_active_users ${values[3]} ${timestamp}
 # HELP scratch_proxy_asap_queue ASAP queue size
 # TYPE scratch_proxy_asap_queue gauge
 scratch_proxy_asap_queue ${queue.queues.asap.length} ${timestamp}
@@ -35,12 +54,13 @@ scratch_proxy_ehhh_queue ${queue.queues.ehhh.length} ${timestamp}
 scratch_proxy_idrc_queue ${queue.queues.idrc.length} ${timestamp}
 # HELP scratch_proxy_reqs_to_scratch Total requests to Scratch
 # TYPE scratch_proxy_reqs_to_scratch counter
-scratch_proxy_reqs_to_scratch ${empheralData.requestsToScratch} ${timestamp}
-`;
+scratch_proxy_reqs_to_scratch ${values[1].value} ${timestamp}
+		`;
 
-	res.send(metricData);
+		res.send(metricData);
 
-	empheralData.queueAdditions = 0;
+		empheralData.queueAdditions = 0;
+	});
 });
 
 export default router;

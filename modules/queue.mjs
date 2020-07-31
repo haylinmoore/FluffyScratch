@@ -5,7 +5,7 @@ import {
 	AUTH_CLOUD_PROJECT,
 	EHHH_ITEMS_PER_SECOND,
 } from "./consts.mjs";
-import db from "../modules/db.mjs";
+import { User, Analytic } from "../modules/db.mjs";
 
 let queue = {
 	queues: {
@@ -61,6 +61,8 @@ setInterval(() => {
 		return;
 	}
 
+	Analytic.increment("value", { where: { name: "requestsToScratch" } });
+
 	switch (latestQueue.type) {
 		case queue.TYPES.Notifications:
 			fetch(
@@ -73,14 +75,17 @@ setInterval(() => {
 						data.count = 0;
 					}
 
-					db.updateUser(latestQueue.data.username, {
-						messages: data.count,
-					});
+					User.update(
+						{ messages: data.count },
+						{
+							where: {
+								username: latestQueue.data.username,
+							},
+						}
+					);
 
 					latestQueue.resolve(data.count);
 				});
-			empheralData.requestsToScratch++;
-
 			break;
 		case queue.TYPES.CloudDataVerification:
 			fetch(
@@ -90,7 +95,6 @@ setInterval(() => {
 				.then((data) => {
 					latestQueue.resolve(data);
 				});
-			empheralData.requestsToScratch++;
 			break;
 		case queue.TYPES.ProfileCommentCollector:
 			fetch(
@@ -100,7 +104,6 @@ setInterval(() => {
 				.then((data) => {
 					latestQueue.resolve(data);
 				});
-			empheralData.requestsToScratch++;
 			break;
 
 		case undefined:

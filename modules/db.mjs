@@ -1,48 +1,75 @@
-import low from "lowdb";
-import FileSync from "lowdb/adapters/FileSync.js";
+import Sequelize from "sequelize";
+import dotenv from "dotenv";
+dotenv.config();
 
-// Set some defaults (required if your JSON file is empty)
-const adapter = new FileSync("db.json");
-const db = low(adapter);
+const sequelize = new Sequelize(
+	process.env.DB_DATABASE || "fluffyscratch",
+	process.env.DB_USERNAME || "root",
+	process.env.DB_PASSWORD || "localtesting",
+	{
+		host: process.env.DB_HOST || "localhost",
+		dialect: process.env.DB_CONNECTION || "mysql",
+		logging: false,
+	}
+);
 
-db.defaults({
-	users: {},
-	analytics: {
-		totalRequests: 0,
-		requestsToScratch: 0,
+sequelize
+	.authenticate()
+	.then(() => {
+		console.log("Connection has been established successfully.");
+	})
+	.catch((err) => {
+		console.error("Unable to connect to the database:", err);
+	});
+
+const User = sequelize.define("user", {
+	username: {
+		type: Sequelize.STRING,
+		primaryKey: true,
 	},
-}).write();
+	id: {
+		type: Sequelize.INTEGER,
+		defaultValue: -1,
+	},
+	lastKeepAlive: {
+		type: Sequelize.BIGINT,
+		defaultValue: -1,
+	},
+	messages: {
+		type: Sequelize.INTEGER,
+		defaultValue: -1,
+	},
+});
 
-db.createUser = function (data) {
-	if (!data.hasOwnProperty("username")) {
-		throw "CreateUser: requires a username";
-	}
-	return {
-		username: data.username || "",
-		id: data.id || -1,
-		lastKeepAlive: data.lastKeepAlive || 0,
-		messages: data.messages || -1,
-	};
-};
+User.sync({ force: false, alter: true })
+	.then(() => {})
+	.catch((err) => {
+		console.error(err);
+	});
 
-db.updateUser = function (username, newData) {
-	let user = db.get(`users.${username}`);
+const Analytic = sequelize.define("analytic", {
+	name: {
+		type: Sequelize.STRING,
+		primaryKey: true,
+	},
+	value: {
+		type: Sequelize.INTEGER,
+	},
+});
 
-	if (user.value() === undefined) {
-		db.set(
-			`users.${username}`,
-			db.createUser({ ...newData, username: username })
-		).write();
-	} else {
-		db.set(`users.${username}`, {
-			...user.value(),
-			...newData,
-		}).write();
-	}
-};
+Analytic.sync({ force: false, alter: true })
+	.then(() => {
+		Analytic.findOrCreate({
+			where: { name: "totalRequests" },
+			defaults: {},
+		});
+		Analytic.findOrCreate({
+			where: { name: "requestsToScratch" },
+			defaults: {},
+		});
+	})
+	.catch((err) => {
+		console.error(err);
+	});
 
-db.getUserItem = function (username, item) {
-	return db.get(`users.${username}.${item}`).value();
-};
-
-export default db;
+export { User, Analytic };
