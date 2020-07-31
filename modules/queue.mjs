@@ -20,6 +20,7 @@ let queue = {
 
 queue.TYPES = {
 	Notifications: 0,
+	GetUserProfile: 1,
 	CloudDataVerification: 2,
 	ProfileCommentCollector: 3,
 };
@@ -96,6 +97,14 @@ setInterval(() => {
 					latestQueue.resolve(data);
 				});
 			break;
+		case queue.TYPES.GetUserProfile:
+			fetch(
+				`https://api.scratch.mit.edu/users/${latestQueue.data.username}/`
+			)
+				.then((response) => response.json())
+				.then((data) => {
+					latestQueue.resolve(data);
+				});
 		case queue.TYPES.ProfileCommentCollector:
 			fetch(
 				`https://scratch.mit.edu/site-api/comments/user/${latestQueue.data.username}/?page=${latestQueue.data.page}`

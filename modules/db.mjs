@@ -2,6 +2,7 @@ import Sequelize from "sequelize";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
 import { GET_USER_IDS } from "./consts.mjs";
+import queue from "./queue.mjs";
 dotenv.config();
 
 const sequelize = new Sequelize(
@@ -74,7 +75,7 @@ Analytic.sync({ force: false, alter: true })
 		console.error(err);
 	});
 
-setInterval(() => {
+function syncIDs() {
 	User.findAll({ where: { id: -1 } }).then((users) => {
 		users.forEach((user) => {
 			fetch(
@@ -83,20 +84,37 @@ setInterval(() => {
 			)
 				.then((response) => response.json())
 				.then((data) => {
-					if (data.error === "notfound") {
-						user.destroy();
+					if (data.error === "notfound" || data.id == null) {
+						queue
+							.add(
+								queue.TYPES.GetUserProfile,
+								{
+									username: user.get("username"),
+								},
+								queue.queues.idrc
+							)
+							.then((profile) => {
+								if (profile.code === "NotFound") {
+									user.destroy();
+								} else {
+									user.set("id", profile.id);
+									user.save();
+								}
+							});
 						return;
-					} else if (user.id == null) {
-						data.id = 0;
+					} else {
+						user.set("id", data.id);
+						user.save();
 					}
-					user.set("id", data.id);
-					user.save();
 				})
 				.catch((err) => {
 					console.log(err);
 				});
 		});
 	});
-}, GET_USER_IDS);
+}
+
+setInterval(syncIDs, GET_USER_IDS);
+setTimeout(syncIDs, 1000);
 
 export { User, Analytic };
