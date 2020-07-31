@@ -38,7 +38,7 @@ scratch_proxy_request_total ${values[2].value} ${timestamp}
 # HELP scratch_proxy_queue_since The amount of additions to the queue since the last time prometheus checked
 scratch_proxy_queue_since ${empheralData.queueAdditions} ${timestamp}
 # HELP scratch_proxy_users_served Total users served
-# TYPE scratch_proxy_users_served counter
+# TYPE scratch_proxy_users_served gauge
 scratch_proxy_users_served ${values[0]} ${timestamp}
 # HELP scratch_proxy_active_users Total active users
 # TYPE scratch_proxy_active_users gauge

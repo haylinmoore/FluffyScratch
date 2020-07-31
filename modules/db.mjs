@@ -1,5 +1,7 @@
 import Sequelize from "sequelize";
+import fetch from "node-fetch";
 import dotenv from "dotenv";
+import { GET_USER_IDS } from "./consts.mjs";
 dotenv.config();
 
 const sequelize = new Sequelize(
@@ -71,5 +73,30 @@ Analytic.sync({ force: false, alter: true })
 	.catch((err) => {
 		console.error(err);
 	});
+
+setInterval(() => {
+	User.findAll({ where: { id: -1 } }).then((users) => {
+		users.forEach((user) => {
+			fetch(
+				"https://scratchdb.lefty.one/v2/user/info/" +
+					user.get("username")
+			)
+				.then((response) => response.json())
+				.then((data) => {
+					if (data.error === "notfound") {
+						user.destroy();
+						return;
+					} else if (user.id == null) {
+						data.id = 0;
+					}
+					user.set("id", data.id);
+					user.save();
+				})
+				.catch((err) => {
+					console.log(err);
+				});
+		});
+	});
+}, GET_USER_IDS);
 
 export { User, Analytic };
