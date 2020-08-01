@@ -1,6 +1,7 @@
 import express from "express";
 import empheralData from "./modules/empheralData.mjs";
 import { Analytic } from "./modules/db.mjs";
+import readLastLines from "read-last-lines";
 // Setups
 const app = express();
 const port = 3000;
@@ -23,7 +24,17 @@ app.get("/", (req, res) =>
 	res.send("If you do not know what this is you should not be here <3")
 );
 
-app.get("/version", (req, res) => res.send("Latest Feature: MySQL"));
+app.get("/commit", (req, res) => {
+	readLastLines.read("./.git/logs/HEAD", 1).then((lines) =>
+		res.send(`
+				${lines
+					.replace(/&/g, "&amp;")
+					.replace(/</g, "&lt;")
+					.replace(/>/g, "&gt;")
+					.replace(/"/g, "&quot;")
+					.replace(/'/g, "&#039;")}`)
+	);
+});
 
 import notifications from "./routes/notifications.mjs";
 app.use("/notifications", notifications);
