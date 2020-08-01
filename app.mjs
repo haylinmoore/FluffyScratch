@@ -49,6 +49,7 @@ import profilecomments from "./routes/profilecomments.mjs";
 app.use("/profilecomments", profilecomments);
 
 import metrics from "./routes/metrics.mjs";
+import fetch from "node-fetch";
 app.use("/metrics", metrics);
 
 app.listen(port, () =>

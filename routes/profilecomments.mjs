@@ -1,6 +1,12 @@
 import express from "express";
 import queue from "../modules/queue.mjs";
 import cheerio from "cheerio";
+import dotenv from "dotenv";
+import fetch from "node-fetch";
+import { SCAN_PROFILES } from "../modules/consts.mjs";
+import { Comment } from "../modules/db.mjs";
+
+dotenv.config();
 
 var router = express.Router();
 
@@ -83,8 +89,37 @@ router.get("/tojson/v1/:username/:page", (req, res) => {
 
 	collectCommentsFromProfile(username, page, (data) => {
 		res.json(data);
+
+		for (let thread of data) {
+			saveCommentToDB(thread, username);
+			for (let child of thread.replies) {
+				saveCommentToDB(child, username);
+			}
+		}
 	});
 });
+
+function saveCommentToDB(comment, profile) {
+	Comment.upsert(
+		{
+			username: comment.username,
+			date: comment.date,
+			text: comment.text,
+			parentID: comment.parent || -1,
+			profile: profile,
+			commentID: comment.commentID,
+		},
+		{
+			where: {
+				commentID: comment.commentID,
+			},
+		}
+	)
+		.then(() => {})
+		.catch((err) => {
+			console.log(err);
+		});
+}
 
 router.get("/stats/v1/:username/", (req, res) => {
 	const { username } = req.params;
@@ -109,5 +144,31 @@ router.get("/stats/v1/:username/", (req, res) => {
 		res.json(stats);
 	});
 });
+
+function scanProfiles() {
+	if (process.env.DEPLOYED) {
+		fetch("https://scratchdb.lefty.one/v2/user/rank/global/followers")
+			.then((response) => response.json())
+			.then((data) => {
+				let users = data.users;
+
+				for (let i = 0; i < 30; i++) {
+					let username = users[i].info.username;
+					collectCommentsFromProfile(username, 1, (data) => {
+						for (let thread of data) {
+							saveCommentToDB(thread, username);
+							for (let child of thread.replies) {
+								saveCommentToDB(child, username);
+							}
+						}
+					});
+				}
+			});
+	}
+}
+
+scanProfiles();
+
+setInterval(scanProfiles, SCAN_PROFILES);
 
 export default router;

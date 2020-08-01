@@ -75,6 +75,43 @@ Analytic.sync({ force: false, alter: true })
 		console.error(err);
 	});
 
+/* 
+"username": "Chiroyce",
+        "usernameID": "58524660",
+        "commentID": "86697819",
+        "date": 1596294692000,
+        "text": "@_RareScratch2_ He doesn’t do F4F.",
+		"parent": "86697361"
+		*/
+
+const Comment = sequelize.define("comment", {
+	username: {
+		type: Sequelize.STRING,
+	},
+	commentID: {
+		type: Sequelize.INTEGER,
+		primaryKey: true,
+	},
+	date: {
+		type: Sequelize.BIGINT,
+	},
+	text: {
+		type: Sequelize.STRING(1024),
+	},
+	parentID: {
+		type: Sequelize.INTEGER,
+	},
+	profile: {
+		type: Sequelize.STRING,
+	},
+});
+
+Comment.sync({ force: false, alter: true })
+	.then(() => {})
+	.catch((err) => {
+		console.error(err);
+	});
+
 function syncIDs() {
 	User.findAll({ where: { id: -1 } }).then((users) => {
 		users.forEach((user) => {
@@ -117,4 +154,4 @@ function syncIDs() {
 setInterval(syncIDs, GET_USER_IDS);
 setTimeout(syncIDs, 1000);
 
-export { User, Analytic };
+export { User, Analytic, Comment };
