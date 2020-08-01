@@ -96,7 +96,7 @@ const Comment = sequelize.define("comment", {
 		type: Sequelize.BIGINT,
 	},
 	text: {
-		type: Sequelize.STRING(1024),
+		type: Sequelize.STRING(2048),
 	},
 	parentID: {
 		type: Sequelize.INTEGER,

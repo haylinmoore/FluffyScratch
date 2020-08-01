@@ -1,4 +1,7 @@
-const QUEUE_ITEMS_PER_SECOND = 10; // Make 10 requests a second
+import dotenv from "dotenv";
+dotenv.config();
+
+const QUEUE_ITEMS_PER_SECOND = process.env.DEPLOYED ? 10 : 10; // Make 10 requests a second unless im testing locally
 const EHHH_ITEMS_PER_SECOND = QUEUE_ITEMS_PER_SECOND - 2;
 const AUTH_CLOUD_PROJECT = 413751680; // The scratch project that handles OAuth
 const MINUTE = 1000 * 60;

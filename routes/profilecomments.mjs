@@ -148,6 +148,11 @@ router.get("/stats/v1/:username/", (req, res) => {
 	});
 });
 
+router.get("/scrapeUser/v1/:username", (req, res) => {
+	scrapWholeProfile(req.params.username, 1);
+	res.send("Started");
+});
+
 function scanProfiles() {
 	if (process.env.DEPLOYED) {
 		fetch("https://scratchdb.lefty.one/v2/user/rank/global/comments")
@@ -171,6 +176,35 @@ function scanProfiles() {
 }
 
 scanProfiles();
+
+function scrapWholeProfile(username, currentPage) {
+	if (currentPage >= 68) {
+		return;
+	} else if (currentPage === 0) {
+		currentPage++;
+	}
+
+	for (let i = 0; i < 10; i++) {
+		let newPage = currentPage + i;
+		if (newPage >= 68) {
+			break;
+		}
+		collectCommentsFromProfile(username, newPage, (data) => {
+			if (data.length > 0) {
+				for (let thread of data) {
+					saveCommentToDB(thread, username);
+					for (let child of thread.replies) {
+						saveCommentToDB(child, username);
+					}
+				}
+				if (newPage % 10 === 0) {
+					scrapWholeProfile(username, newPage + 10);
+				}
+			} else {
+			}
+		});
+	}
+}
 
 setInterval(scanProfiles, SCAN_PROFILES);
 
