@@ -34,7 +34,7 @@ router.get("/", (req, res) => {
 		let metricData = `
 # HELP scratch_proxy_request_total The total number of HTTP requests.
 # TYPE scratch_proxy_request_total counter
-scratch_proxy_request_total ${requestsToScratch.value} ${timestamp}
+scratch_proxy_request_total ${totalRequests.value} ${timestamp}
 # HELP scratch_proxy_queue_since The amount of additions to the queue since the last time prometheus checked
 scratch_proxy_queue_since ${empheralData.queueAdditions} ${timestamp}
 # HELP scratch_proxy_users_served Total users served
@@ -54,7 +54,7 @@ scratch_proxy_ehhh_queue ${queue.queues.ehhh.length} ${timestamp}
 scratch_proxy_idrc_queue ${queue.queues.idrc.length} ${timestamp}
 # HELP scratch_proxy_reqs_to_scratch Total requests to Scratch
 # TYPE scratch_proxy_reqs_to_scratch counter
-scratch_proxy_reqs_to_scratch ${totalRequests.value} ${timestamp}
+scratch_proxy_reqs_to_scratch ${requestsToScratch.value} ${timestamp}
 		`;
 
 		res.send(metricData);
