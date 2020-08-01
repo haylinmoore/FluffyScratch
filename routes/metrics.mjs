@@ -30,19 +30,19 @@ router.get("/", (req, res) => {
 		requestsToScratch,
 		totalRequests,
 		activeUsers,
-	]).then((values) => {
+	]).then(([userCount, requestsToScratch, totalRequests, activeUsers]) => {
 		let metricData = `
 # HELP scratch_proxy_request_total The total number of HTTP requests.
 # TYPE scratch_proxy_request_total counter
-scratch_proxy_request_total ${values[2].value} ${timestamp}
+scratch_proxy_request_total ${requestsToScratch.value} ${timestamp}
 # HELP scratch_proxy_queue_since The amount of additions to the queue since the last time prometheus checked
 scratch_proxy_queue_since ${empheralData.queueAdditions} ${timestamp}
 # HELP scratch_proxy_users_served Total users served
 # TYPE scratch_proxy_users_served gauge
-scratch_proxy_users_served ${values[0]} ${timestamp}
+scratch_proxy_users_served ${userCount} ${timestamp}
 # HELP scratch_proxy_active_users Total active users
 # TYPE scratch_proxy_active_users gauge
-scratch_proxy_active_users ${values[3]} ${timestamp}
+scratch_proxy_active_users ${activeUsers} ${timestamp}
 # HELP scratch_proxy_asap_queue ASAP queue size
 # TYPE scratch_proxy_asap_queue gauge
 scratch_proxy_asap_queue ${queue.queues.asap.length} ${timestamp}
@@ -54,7 +54,7 @@ scratch_proxy_ehhh_queue ${queue.queues.ehhh.length} ${timestamp}
 scratch_proxy_idrc_queue ${queue.queues.idrc.length} ${timestamp}
 # HELP scratch_proxy_reqs_to_scratch Total requests to Scratch
 # TYPE scratch_proxy_reqs_to_scratch counter
-scratch_proxy_reqs_to_scratch ${values[1].value} ${timestamp}
+scratch_proxy_reqs_to_scratch ${totalRequests.value} ${timestamp}
 		`;
 
 		res.send(metricData);
