@@ -10,6 +10,9 @@ dotenv.config();
 
 var router = express.Router();
 
+import searchcomments from "./searchcomments.mjs";
+router.use("/search", searchcomments);
+
 const convertCommentToJSON = function (comment, head) {
 	let obj = {
 		username: comment.find("div.name").text().trim(),
@@ -105,7 +108,7 @@ function saveCommentToDB(comment, profile) {
 			username: comment.username,
 			date: comment.date,
 			text: comment.text,
-			parentID: comment.parent || -1,
+			parentID: comment.parent || comment.commentID,
 			profile: profile,
 			commentID: comment.commentID,
 		},
@@ -147,7 +150,7 @@ router.get("/stats/v1/:username/", (req, res) => {
 
 function scanProfiles() {
 	if (process.env.DEPLOYED) {
-		fetch("https://scratchdb.lefty.one/v2/user/rank/global/followers")
+		fetch("https://scratchdb.lefty.one/v2/user/rank/global/comments")
 			.then((response) => response.json())
 			.then((data) => {
 				let users = data.users;
