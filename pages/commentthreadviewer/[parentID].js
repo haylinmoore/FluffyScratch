@@ -53,7 +53,7 @@ export default function commentthreadviewer({ Comments }) {
 
 export async function getServerSideProps(context) {
 	const response = await fetch(
-		`https://fluffyscratch.hampton.pw/profilecomments/search/findBy/parentID/${context.params.parentID}`
+		`https://fluffyscratch.hampton.pw/profilecomments/search/findby/parentID/${context.params.parentID}`
 	);
 	const json = await response.json();
 
