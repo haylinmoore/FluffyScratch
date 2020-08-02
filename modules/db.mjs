@@ -42,6 +42,10 @@ const User = sequelize.define("user", {
 		type: Sequelize.INTEGER,
 		defaultValue: -1,
 	},
+	lastScrape: {
+		type: Sequelize.BIGINT,
+		defaultValue: -1,
+	},
 });
 
 User.sync({ force: false, alter: true })

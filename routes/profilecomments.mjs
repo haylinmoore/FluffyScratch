@@ -3,6 +3,7 @@ import queue from "../modules/queue.mjs";
 import cheerio from "cheerio";
 import dotenv from "dotenv";
 import fetch from "node-fetch";
+import Sequelize from "sequelize";
 import { SCAN_PROFILES } from "../modules/consts.mjs";
 import { Comment } from "../modules/db.mjs";
 
@@ -124,31 +125,51 @@ function saveCommentToDB(comment, profile) {
 		});
 }
 
-router.get("/stats/v1/:username/", (req, res) => {
-	const { username } = req.params;
-	collectCommentsFromProfile(username, 1, (comments) => {
-		if (comments.length === 0) {
-			res.json({ err: "User has no comments :(" });
-		}
-		let stats = {
-			username: username,
-		};
+router.get("/stats/v1/:profile/", (req, res) => {
+	const { profile } = req.params;
 
-		let oldestComment = 10 ** 40;
-		for (let comment of comments) {
-			if (comment.date < oldestComment) {
-				oldestComment = comment.date;
-			}
-		}
-
-		stats.milisecondsPerComment =
-			(new Date().valueOf() - oldestComment) / comments.length;
-
-		res.json(stats);
+	let oldestComment = Comment.min("date", {
+		where: {
+			profile,
+		},
 	});
+
+	let commentCount = Comment.count({
+		where: {
+			profile,
+		},
+	});
+
+	let commonCommentors = Comment.findAll({
+		attributes: [
+			[Sequelize.fn("COUNT", Sequelize.col("username")), "count"],
+			"username",
+		],
+		group: "username",
+		where: {
+			profile: profile,
+		},
+		order: [Sequelize.literal("count DESC")],
+		limit: 5,
+	});
+
+	Promise.all([oldestComment, commentCount, commonCommentors])
+		.then(([oldestComment, commentCount, commonCommentors]) => {
+			res.json({
+				oldestComment,
+				commentCount,
+				milisecondsPerComment:
+					(new Date().valueOf() - oldestComment) / commentCount,
+				commonCommentors,
+			});
+		})
+		.catch((err) => {
+			console.log(err);
+			res.json({ err: err });
+		});
 });
 
-router.get("/scrapeUser/v1/:username", (req, res) => {
+router.get("/scrapeuser/v1/:username", (req, res) => {
 	scrapWholeProfile(req.params.username, 1);
 	res.send("Started");
 });
