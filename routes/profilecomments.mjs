@@ -142,7 +142,7 @@ function getStats(profile) {
 			},
 		});
 
-		let commonCommentors = Comment.findAll({
+		let topCommentors = Comment.findAll({
 			attributes: [
 				[Sequelize.fn("COUNT", Sequelize.col("username")), "count"],
 				"username",
@@ -155,14 +155,14 @@ function getStats(profile) {
 			limit: 5,
 		});
 
-		Promise.all([oldestComment, commentCount, commonCommentors])
-			.then(([oldestComment, commentCount, commonCommentors]) => {
+		Promise.all([oldestComment, commentCount, topCommentors])
+			.then(([oldestComment, commentCount, topCommentors]) => {
 				resolve({
 					oldestComment,
 					commentCount,
 					milisecondsPerComment:
 						(new Date().valueOf() - oldestComment) / commentCount,
-					commonCommentors,
+					topCommentors,
 				});
 			})
 			.catch((err) => {
