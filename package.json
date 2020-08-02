@@ -2,7 +2,6 @@
 	"name": "scratchproxy",
 	"version": "1.0.0",
 	"description": "",
-	"type": "module",
 	"main": "app.js",
 	"scripts": {
 		"start": "node --experimental-modules app.mjs",
@@ -16,7 +15,10 @@
 		"express": "^4.17.1",
 		"fs": "0.0.1-security",
 		"mysql2": "^2.1.0",
+		"next": "^9.5.1",
 		"node-fetch": "^2.6.0",
+		"react": "^16.13.1",
+		"react-dom": "^16.13.1",
 		"read-last-lines": "^1.7.2",
 		"sequelize": "^6.3.3"
 	}
