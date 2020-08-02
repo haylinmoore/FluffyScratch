@@ -12,6 +12,8 @@ dotenv.config();
 var router = express.Router();
 
 import searchcomments from "./searchcomments.mjs";
+import { User } from "../modules/db.mjs";
+import e from "express";
 router.use("/search", searchcomments);
 
 const convertCommentToJSON = function (comment, head) {
@@ -28,7 +30,8 @@ const convertCommentToJSON = function (comment, head) {
 			.find("div.content")
 			.text()
 			.trim()
-			.replaceAll("\n      \n      \n       ", ""),
+			.replaceAll("\n      \n      \n       ", "")
+			.substring(0, 1024),
 	};
 
 	if (head) {
@@ -125,53 +128,74 @@ function saveCommentToDB(comment, profile) {
 		});
 }
 
-router.get("/stats/v1/:profile/", (req, res) => {
-	const { profile } = req.params;
-
-	let oldestComment = Comment.min("date", {
-		where: {
-			profile,
-		},
-	});
-
-	let commentCount = Comment.count({
-		where: {
-			profile,
-		},
-	});
-
-	let commonCommentors = Comment.findAll({
-		attributes: [
-			[Sequelize.fn("COUNT", Sequelize.col("username")), "count"],
-			"username",
-		],
-		group: "username",
-		where: {
-			profile: profile,
-		},
-		order: [Sequelize.literal("count DESC")],
-		limit: 5,
-	});
-
-	Promise.all([oldestComment, commentCount, commonCommentors])
-		.then(([oldestComment, commentCount, commonCommentors]) => {
-			res.json({
-				oldestComment,
-				commentCount,
-				milisecondsPerComment:
-					(new Date().valueOf() - oldestComment) / commentCount,
-				commonCommentors,
-			});
-		})
-		.catch((err) => {
-			console.log(err);
-			res.json({ err: err });
+function getStats(profile) {
+	return new Promise((resolve, reject) => {
+		let oldestComment = Comment.min("date", {
+			where: {
+				profile,
+			},
 		});
+
+		let commentCount = Comment.count({
+			where: {
+				profile,
+			},
+		});
+
+		let commonCommentors = Comment.findAll({
+			attributes: [
+				[Sequelize.fn("COUNT", Sequelize.col("username")), "count"],
+				"username",
+			],
+			group: "username",
+			where: {
+				profile: profile,
+			},
+			order: [Sequelize.literal("count DESC")],
+			limit: 5,
+		});
+
+		Promise.all([oldestComment, commentCount, commonCommentors])
+			.then(([oldestComment, commentCount, commonCommentors]) => {
+				resolve({
+					oldestComment,
+					commentCount,
+					milisecondsPerComment:
+						(new Date().valueOf() - oldestComment) / commentCount,
+					commonCommentors,
+				});
+			})
+			.catch((err) => {
+				console.log(err);
+				reject(err);
+			});
+	});
+}
+
+router.get("/stats/v1/:profile/", (req, res) => {
+	getStats(req.params.profile).then((data) => {
+		res.json(data);
+	});
 });
 
 router.get("/scrapeuser/v1/:username", (req, res) => {
-	scrapWholeProfile(req.params.username, 1);
-	res.send("Started");
+	const username = req.params.username;
+	User.findOrCreate({
+		where: { username: username },
+		defaults: {
+			username: username,
+		},
+	}).then(([user, created]) => {
+		if (user.nextScrape < new Date().valueOf()) {
+			scrapWholeProfile(username, 1, res);
+		} else {
+			res.send(
+				`${username} was already scraped on ${new Date(
+					user.lastScrape
+				)}, next scrape is at ${new Date(user.nextScrape)}`
+			);
+		}
+	});
 });
 
 function scanProfiles() {
@@ -198,8 +222,9 @@ function scanProfiles() {
 
 scanProfiles();
 
-function scrapWholeProfile(username, currentPage) {
+function scrapWholeProfile(username, currentPage, res) {
 	if (currentPage >= 68) {
+		scrapeFinished(username, res);
 		return;
 	} else if (currentPage === 0) {
 		currentPage++;
@@ -219,12 +244,31 @@ function scrapWholeProfile(username, currentPage) {
 					}
 				}
 				if (newPage % 10 === 0) {
-					scrapWholeProfile(username, newPage + 10);
+					scrapWholeProfile(username, newPage + 10, res);
 				}
-			} else {
+			} else if (newPage % 10 == 9) {
+				scrapeFinished(username, res);
 			}
 		});
 	}
+}
+
+function scrapeFinished(username, res) {
+	res.send(`The scrape on the users profile ${username} has finished :)`);
+	getStats(username).then((stats) => {
+		const date = new Date().valueOf();
+		User.update(
+			{
+				lastScrape: date,
+				nextScrape: date + stats.milisecondsPerComment * 20,
+			},
+			{
+				where: {
+					username: username,
+				},
+			}
+		);
+	});
 }
 
 setInterval(scanProfiles, SCAN_PROFILES);
