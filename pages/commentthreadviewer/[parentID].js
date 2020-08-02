@@ -4,6 +4,7 @@ function Comment(props) {
 			<th>
 				<img
 					src={`https://fluffyscratch.hampton.pw/profilepicture/v1/${props.comment.username}`}
+					style={{ maxWidth: "64px" }}
 				></img>
 			</th>
 			<th>{props.comment.username}</th>
