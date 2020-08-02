@@ -189,11 +189,13 @@ router.get("/scrapeuser/v1/:username", (req, res) => {
 		if (user.nextScrape < new Date().valueOf()) {
 			scrapWholeProfile(username, 1, res);
 		} else {
-			res.send(
-				`${username} was already scraped on ${new Date(
+			res.json({
+				msg: `${username} was already scraped on ${new Date(
 					user.lastScrape
-				)}, next scrape is at ${new Date(user.nextScrape)}`
-			);
+				)}, next scrape is at ${new Date(user.nextScrape)}`,
+				nextScrape: user.nextScrape,
+				lastScrape: user.lastScrape,
+			});
 		}
 	});
 });
@@ -254,7 +256,6 @@ function scrapWholeProfile(username, currentPage, res) {
 }
 
 function scrapeFinished(username, res) {
-	res.send(`The scrape on the users profile ${username} has finished :)`);
 	getStats(username).then((stats) => {
 		const date = new Date().valueOf();
 		User.update(
@@ -267,7 +268,13 @@ function scrapeFinished(username, res) {
 					username: username,
 				},
 			}
-		);
+		).then((user) => {
+			res.json({
+				msg: `The scrape on the users profile ${username} has finished :)`,
+				nextScrape: user.nextScrape,
+				lastScrape: user.lastScrape,
+			});
+		});
 	});
 }
 
