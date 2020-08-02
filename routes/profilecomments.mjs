@@ -13,7 +13,6 @@ var router = express.Router();
 
 import searchcomments from "./searchcomments.mjs";
 import { User } from "../modules/db.mjs";
-import e from "express";
 router.use("/search", searchcomments);
 
 const convertCommentToJSON = function (comment, head) {
