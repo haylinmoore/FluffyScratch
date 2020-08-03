@@ -207,6 +207,7 @@ function scanProfiles() {
 			id: { [Op.gt]: -1 },
 			scanning: 0,
 		},
+		order: sequelize.random(),
 	}).then((user) => {
 		if (user === null) {
 			return;
@@ -217,7 +218,7 @@ function scanProfiles() {
 		user.set("scanning", 1);
 		user.save();
 		if (user.get("fullScanned") == false) {
-			scrapWholeProfile(username, 0, {
+			scrapWholeProfile(username, 1, {
 				json: function () {},
 			});
 		} else {
@@ -244,7 +245,7 @@ function scanProfiles() {
 	});
 }
 
-setInterval(scanProfiles, SCAN_PROFILES);
+//setInterval(scanProfiles, SCAN_PROFILES);
 
 function scrapWholeProfile(username, currentPage, res) {
 	if (currentPage >= 68) {
@@ -291,7 +292,7 @@ function scrapeFinished(username, res) {
 		const date = new Date().valueOf();
 		let nextScrape = date + stats.milisecondsPerComment * 20;
 		let longest = date + MAX_SCAN_TIMEOUT;
-		if (nextScrape === null || nextScrape > longest) {
+		if (stats.milisecondsPerComment == null || nextScrape > longest) {
 			nextScrape = longest;
 		}
 		User.update(
