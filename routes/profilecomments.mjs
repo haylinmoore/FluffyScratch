@@ -5,7 +5,7 @@ import dotenv from "dotenv";
 import fetch from "node-fetch";
 import Sequelize from "sequelize";
 const Op = Sequelize.Op;
-import { SCAN_PROFILES } from "../modules/consts.mjs";
+import { SCAN_PROFILES, MAX_SCAN_TIMEOUT } from "../modules/consts.mjs";
 import { Comment } from "../modules/db.mjs";
 
 dotenv.config();
@@ -228,19 +228,16 @@ function scanProfiles() {
 						saveCommentToDB(child, username);
 					}
 				}
-				scrapeFinished(username, {
-					json: function () {},
-				});
-			});
-			collectCommentsFromProfile(username, 2, (data) => {
-				for (let thread of data) {
-					saveCommentToDB(thread, username);
-					for (let child of thread.replies) {
-						saveCommentToDB(child, username);
+				collectCommentsFromProfile(username, 2, (data) => {
+					for (let thread of data) {
+						saveCommentToDB(thread, username);
+						for (let child of thread.replies) {
+							saveCommentToDB(child, username);
+						}
 					}
-				}
-				scrapeFinished(username, {
-					json: function () {},
+					scrapeFinished(username, {
+						json: function () {},
+					});
 				});
 			});
 		}
@@ -283,7 +280,7 @@ function scrapWholeProfile(username, currentPage, res) {
 					scrapWholeProfile(username, newPage + 10, res);
 				}
 			} else if (newPage % 10 == 9) {
-				scrapeFinished(username, res);
+				setTimeout(scrapeFinished(username, res), 5000);
 			}
 		});
 	}
@@ -292,10 +289,15 @@ function scrapWholeProfile(username, currentPage, res) {
 function scrapeFinished(username, res) {
 	getStats(username).then((stats) => {
 		const date = new Date().valueOf();
+		let nextScrape = date + stats.milisecondsPerComment * 20;
+		let longest = date + MAX_SCAN_TIMEOUT;
+		if (nextScrape === null || nextScrape > longest) {
+			nextScrape = longest;
+		}
 		User.update(
 			{
 				lastScrape: date,
-				nextScrape: date + stats.milisecondsPerComment * 20,
+				nextScrape: nextScrape,
 				fullScanned: true,
 				scanning: 0,
 			},

@@ -8,6 +8,9 @@ const MINUTE = 1000 * 60;
 const EMPHERAL_DATA_SAVE = MINUTE; // Save Empheral data every 60s
 const ONLINE_CUTOFF_TIME = MINUTE * 2; // Users are online if they pinged within a two minutes
 const GET_USER_IDS = MINUTE * 2;
+const HOUR = MINUTE * 60;
+const DAY = HOUR * 24;
+const MAX_SCAN_TIMEOUT = DAY * 120;
 const SCAN_PROFILES = MINUTE / 4;
 
 export {
@@ -19,4 +22,5 @@ export {
 	GET_USER_IDS,
 	MINUTE,
 	SCAN_PROFILES,
+	MAX_SCAN_TIMEOUT,
 };
