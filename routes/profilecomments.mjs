@@ -203,7 +203,7 @@ router.get("/scrapeuser/v1/:username", (req, res) => {
 function scanProfiles() {
 	User.findOne({
 		where: {
-			nextScrape: { [Op.lt]: new Date().valueOf() },
+			nextScrape: { [Op.lt]: new Date().valueOf(), [Op.gt]: -2 },
 			id: { [Op.gt]: -1 },
 			scanning: 0,
 		},
