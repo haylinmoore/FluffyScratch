@@ -4,6 +4,7 @@ import cheerio from "cheerio";
 import dotenv from "dotenv";
 import fetch from "node-fetch";
 import Sequelize from "sequelize";
+const Op = Sequelize.Op;
 import { SCAN_PROFILES } from "../modules/consts.mjs";
 import { Comment } from "../modules/db.mjs";
 
@@ -200,28 +201,53 @@ router.get("/scrapeuser/v1/:username", (req, res) => {
 });
 
 function scanProfiles() {
-	if (process.env.DEPLOYED) {
-		fetch("https://scratchdb.lefty.one/v2/user/rank/global/comments")
-			.then((response) => response.json())
-			.then((data) => {
-				let users = data.users;
+	User.findOne({
+		where: {
+			nextScrape: { [Op.lt]: new Date().valueOf() },
+			id: { [Op.gt]: -1 },
+			scanning: 0,
+		},
+	}).then((user) => {
+		if (user === null) {
+			return;
+		}
 
-				for (let i = 0; i < 30; i++) {
-					let username = users[i].info.username;
-					collectCommentsFromProfile(username, 1, (data) => {
-						for (let thread of data) {
-							saveCommentToDB(thread, username);
-							for (let child of thread.replies) {
-								saveCommentToDB(child, username);
-							}
-						}
-					});
-				}
+		let username = user.get("username");
+		console.log(`Selected ${username}`);
+		user.set("scanning", 1);
+		user.save();
+		if (user.get("fullScanned") == false) {
+			scrapWholeProfile(username, 0, {
+				json: function () {},
 			});
-	}
+		} else {
+			collectCommentsFromProfile(username, 1, (data) => {
+				for (let thread of data) {
+					saveCommentToDB(thread, username);
+					for (let child of thread.replies) {
+						saveCommentToDB(child, username);
+					}
+				}
+				scrapeFinished(username, {
+					json: function () {},
+				});
+			});
+			collectCommentsFromProfile(username, 2, (data) => {
+				for (let thread of data) {
+					saveCommentToDB(thread, username);
+					for (let child of thread.replies) {
+						saveCommentToDB(child, username);
+					}
+				}
+				scrapeFinished(username, {
+					json: function () {},
+				});
+			});
+		}
+	});
 }
 
-scanProfiles();
+setInterval(scanProfiles, SCAN_PROFILES);
 
 function scrapWholeProfile(username, currentPage, res) {
 	if (currentPage >= 68) {
@@ -230,6 +256,15 @@ function scrapWholeProfile(username, currentPage, res) {
 	} else if (currentPage === 0) {
 		currentPage++;
 	}
+
+	User.update(
+		{ scanning: currentPage },
+		{
+			where: {
+				username: username,
+			},
+		}
+	);
 
 	for (let i = 0; i < 10; i++) {
 		let newPage = currentPage + i;
@@ -261,6 +296,8 @@ function scrapeFinished(username, res) {
 			{
 				lastScrape: date,
 				nextScrape: date + stats.milisecondsPerComment * 20,
+				fullScanned: true,
+				scanning: 0,
 			},
 			{
 				where: {
@@ -276,7 +313,5 @@ function scrapeFinished(username, res) {
 		});
 	});
 }
-
-setInterval(scanProfiles, SCAN_PROFILES);
 
 export default router;

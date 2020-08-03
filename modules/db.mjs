@@ -50,6 +50,14 @@ const User = sequelize.define("user", {
 		type: Sequelize.BIGINT,
 		defaultValue: -1,
 	},
+	scanning: {
+		type: Sequelize.INTEGER,
+		defaultValue: 0,
+	},
+	fullScanned: {
+		type: Sequelize.BOOLEAN,
+		defaultValue: false,
+	},
 });
 
 User.sync({ force: false, alter: true })
