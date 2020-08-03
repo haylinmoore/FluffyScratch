@@ -245,7 +245,7 @@ function scanProfiles() {
 	});
 }
 
-//setInterval(scanProfiles, SCAN_PROFILES);
+setInterval(scanProfiles, SCAN_PROFILES);
 
 function scrapWholeProfile(username, currentPage, res) {
 	if (currentPage >= 68) {
