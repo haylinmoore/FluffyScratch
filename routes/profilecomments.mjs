@@ -109,11 +109,19 @@ router.get("/tojson/v1/:username/:page", (req, res) => {
 });
 
 function commentObjectToCommentDBObject(comment, profile) {
+	let parentID = -1;
+	if (comment.replies) {
+		if (comment.replies.length > 0) {
+			parentID = comment.commentID;
+		}
+	} else if (comment.parent) {
+		parentID = comment.parent;
+	}
 	return {
 		username: comment.username,
 		date: comment.date,
 		text: comment.text,
-		parentID: comment.parent || comment.commentID,
+		parentID: parentID,
 		profile: profile,
 		commentID: comment.commentID,
 	};
@@ -135,7 +143,9 @@ function saveCommentPageToDB(page, profile) {
 			return;
 		}
 
-		Comment.bulkCreate(comments, { updateOnDuplicate: ["text"] })
+		Comment.bulkCreate(comments, {
+			updateOnDuplicate: ["text", "parentID"],
+		})
 			.then(() => {
 				resolve();
 			})
