@@ -4,7 +4,7 @@
 	"description": "",
 	"main": "app.js",
 	"scripts": {
-		"start": "node --experimental-modules app.mjs",
+		"start": "NODE_OPTIONS=--no-warnings node --experimental-modules app.mjs",
 		"build": "next build",
 		"deploy": "sudo docker build . -t 'registry.voyager1.hampton.pw/scratchproxy' && sudo docker push 'registry.voyager1.hampton.pw/scratchproxy'"
 	},
