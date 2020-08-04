@@ -307,31 +307,7 @@ function scrapeWholeProfile(username, currentPage) {
 					if (currentPage != 1) {
 						resolve();
 					}
-					return getProfileCommentStats(username);
-				})
-				.then((stats) => {
-					const date = new Date().valueOf();
-					let nextScrape = date + stats.milisecondsPerComment * 20;
-					let longest = date + MAX_SCAN_TIMEOUT;
-					if (
-						stats.milisecondsPerComment == null ||
-						nextScrape > longest
-					) {
-						nextScrape = longest;
-					}
-					return User.update(
-						{
-							lastScrape: date,
-							nextScrape: nextScrape,
-							fullScanned: true,
-							scanning: 0,
-						},
-						{
-							where: {
-								username: username,
-							},
-						}
-					);
+					return calculateNextScan(username);
 				})
 				.then(() => {
 					resolve();
@@ -339,5 +315,70 @@ function scrapeWholeProfile(username, currentPage) {
 		});
 	});
 }
+
+function calculateNextScan(username) {
+	new Promise((resolve, reject) => {
+		getProfileCommentStats(username).then((stats) => {
+			const date = new Date().valueOf();
+			let nextScrape = date + stats.milisecondsPerComment * 20;
+			let longest = date + MAX_SCAN_TIMEOUT;
+			if (stats.milisecondsPerComment == null || nextScrape > longest) {
+				nextScrape = longest;
+			}
+			return User.update(
+				{
+					lastScrape: date,
+					nextScrape: nextScrape,
+					fullScanned: true,
+					scanning: 0,
+				},
+				{
+					where: {
+						username: username,
+					},
+				}
+			);
+		});
+	});
+}
+
+function scanProfiles() {
+	User.findOne({
+		where: {
+			nextScrape: { [Op.lt]: new Date().valueOf(), [Op.gt]: -2 },
+			id: { [Op.gt]: -1 },
+			scanning: 0,
+		},
+	}).then((user) => {
+		if (user === null) {
+			return;
+		}
+
+		let username = user.get("username");
+		user.set("scanning", 1);
+		user.save();
+		if (user.get("fullScanned") == false) {
+			scrapeWholeProfile(username, 1);
+		} else {
+			let pages = [];
+
+			collectCommentsFromProfile(username, 1)
+				.then((comments) => {
+					return saveCommentPageToDB(comments, username);
+				})
+				.then(() => {
+					return collectCommentsFromProfile(username, 2);
+				})
+				.then((comments) => {
+					return saveCommentPageToDB(comments, username);
+				})
+				.then(() => {
+					calculateNextScan(username);
+				});
+		}
+	});
+}
+
+setInterval(scanProfiles, SCAN_PROFILES);
 
 export default router;

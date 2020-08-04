@@ -3,7 +3,6 @@ import empheralData from "./modules/empheralData.mjs";
 import { Analytic } from "./modules/db.mjs";
 import readLastLines from "read-last-lines";
 import next from "next";
-
 import notifications from "./routes/notifications.mjs";
 import auth from "./routes/auth.mjs";
 import profilepicture from "./routes/profilepicture.mjs";
