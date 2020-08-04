@@ -5,7 +5,11 @@ import dotenv from "dotenv";
 import fetch from "node-fetch";
 import Sequelize from "sequelize";
 const Op = Sequelize.Op;
-import { SCAN_PROFILES, MAX_SCAN_TIMEOUT } from "../modules/consts.mjs";
+import {
+	SCAN_PROFILES,
+	MAX_SCAN_TIMEOUT,
+	MAX_COMMENT_PAGE,
+} from "../modules/consts.mjs";
 import { Comment } from "../modules/db.mjs";
 
 dotenv.config();
@@ -43,40 +47,42 @@ const convertCommentToJSON = function (comment, head) {
 	return obj;
 };
 
-const collectCommentsFromProfile = (username, page, callback) => {
-	queue
-		.add(
-			queue.TYPES.ProfileCommentCollector,
-			{
-				username: username,
-				page: page,
-			},
-			queue.queues.asap
-		)
-		.then((html) => {
-			const $ = cheerio.load(html);
-			let comments = [];
+const collectCommentsFromProfile = (username, page) => {
+	return new Promise((resolve) => {
+		queue
+			.add(
+				queue.TYPES.ProfileCommentCollector,
+				{
+					username: username,
+					page: page,
+				},
+				queue.queues.asap
+			)
+			.then((html) => {
+				const $ = cheerio.load(html);
+				let comments = [];
 
-			$("li.top-level-reply").each(function (index) {
-				let elm = $(this);
-				let headComment = convertCommentToJSON(
-					elm.find("div.comment").first(),
-					true
-				);
+				$("li.top-level-reply").each(function (index) {
+					let elm = $(this);
+					let headComment = convertCommentToJSON(
+						elm.find("div.comment").first(),
+						true
+					);
 
-				elm.find("ul.replies")
-					.find("div.comment")
-					.each((index, comment) => {
-						headComment.replies.push(
-							convertCommentToJSON($(comment), false)
-						);
-					});
+					elm.find("ul.replies")
+						.find("div.comment")
+						.each((index, comment) => {
+							headComment.replies.push(
+								convertCommentToJSON($(comment), false)
+							);
+						});
 
-				comments.push(headComment);
+					comments.push(headComment);
+				});
+
+				resolve(comments);
 			});
-
-			callback(comments);
-		});
+	});
 };
 
 router.get("/tojson/v1/:username/", (req, res) => {
@@ -86,49 +92,62 @@ router.get("/tojson/v1/:username/", (req, res) => {
 router.get("/tojson/v1/:username/:page", (req, res) => {
 	let { username, page } = req.params;
 
-	if (isNaN(Number(page)) || Number(page) <= 0 || Number(page) >= 68) {
+	if (
+		isNaN(Number(page)) ||
+		Number(page) <= 0 ||
+		Number(page) > MAX_COMMENT_PAGE
+	) {
 		res.json({
-			error:
-				"Page number is invalid, page numbers must be a valid number between 1 and 67",
+			error: `Page number is invalid, page numbers must be a valid number between 1 and ${MAX_COMMENT_PAGE}`,
 		});
 		return;
 	}
 
-	collectCommentsFromProfile(username, page, (data) => {
+	collectCommentsFromProfile(username, page).then((data) => {
 		res.json(data);
-
-		for (let thread of data) {
-			saveCommentToDB(thread, username);
-			for (let child of thread.replies) {
-				saveCommentToDB(child, username);
-			}
-		}
 	});
 });
 
-function saveCommentToDB(comment, profile) {
-	Comment.upsert(
-		{
-			username: comment.username,
-			date: comment.date,
-			text: comment.text,
-			parentID: comment.parent || comment.commentID,
-			profile: profile,
-			commentID: comment.commentID,
-		},
-		{
-			where: {
-				commentID: comment.commentID,
-			},
-		}
-	)
-		.then(() => {})
-		.catch((err) => {
-			console.log(err);
-		});
+function commentObjectToCommentDBObject(comment, profile) {
+	return {
+		username: comment.username,
+		date: comment.date,
+		text: comment.text,
+		parentID: comment.parent || comment.commentID,
+		profile: profile,
+		commentID: comment.commentID,
+	};
 }
 
-function getStats(profile) {
+function saveCommentPageToDB(page, profile) {
+	return new Promise((resolve, reject) => {
+		let comments = [];
+
+		for (let thread of page) {
+			comments.push(commentObjectToCommentDBObject(thread, profile));
+			for (let child of thread.replies) {
+				comments.push(commentObjectToCommentDBObject(child, profile));
+			}
+		}
+
+		if (comments.length == 0) {
+			resolve();
+			return;
+		}
+
+		Comment.bulkCreate(comments, { updateOnDuplicate: ["text"] })
+			.then(() => {
+				resolve();
+			})
+			.catch((err) => {
+				console.log(comments);
+				console.log(err);
+				resolve();
+			});
+	});
+}
+
+function getProfileCommentStats(profile) {
 	return new Promise((resolve, reject) => {
 		let oldestComment = Comment.min("date", {
 			where: {
@@ -173,8 +192,31 @@ function getStats(profile) {
 }
 
 router.get("/stats/v1/:profile/", (req, res) => {
-	getStats(req.params.profile).then((data) => {
+	getProfileCommentStats(req.params.profile).then((data) => {
 		res.json(data);
+	});
+});
+
+router.get("/scrapeuser/v1/:username/status", (req, res) => {
+	const username = req.params.username;
+
+	User.findOne({
+		where: {
+			username,
+		},
+	}).then((user) => {
+		let msg;
+		if (user.get("scanning") > 0) {
+			msg = `${username} is still being scraped`;
+		} else if (user.get("lastScrape") === -1) {
+			msg = `${username} has never been scraped or had a scrape requested`;
+		} else {
+			msg = `${username} finished being scraped on ${new Date(
+				user.get("lastScrape")
+			)}`;
+		}
+
+		res.json({ msg });
 	});
 });
 
@@ -187,7 +229,11 @@ router.get("/scrapeuser/v1/:username", (req, res) => {
 		},
 	}).then(([user, created]) => {
 		if (user.nextScrape < new Date().valueOf()) {
-			scrapWholeProfile(username, 1, res);
+			res.json({
+				msg: `${username} has been scraped. Thank you for your wait`,
+				link: `https://fluffyscratch.hampton.pw/scrapeuser/v1/${username}/status`,
+			});
+			scrapeWholeProfile(username, 1);
 		} else {
 			res.json({
 				msg: `${username} was already scraped on ${new Date(
@@ -200,118 +246,86 @@ router.get("/scrapeuser/v1/:username", (req, res) => {
 	});
 });
 
-function scanProfiles() {
-	User.findOne({
-		where: {
-			nextScrape: { [Op.lt]: new Date().valueOf(), [Op.gt]: -2 },
-			id: { [Op.gt]: -1 },
-			scanning: 0,
-		},
-	}).then((user) => {
-		if (user === null) {
+function scrapeWholeProfile(username, currentPage) {
+	return new Promise((resolve) => {
+		if (currentPage <= 0) {
+			currentPage = 1;
+		} else if (currentPage > MAX_COMMENT_PAGE) {
+			resolve("Finished Scrape by hitting max");
 			return;
 		}
 
-		let username = user.get("username");
-		console.log(`Selected ${username}`);
-		user.set("scanning", 1);
-		user.save();
-		if (user.get("fullScanned") == false) {
-			scrapWholeProfile(username, 1, {
-				json: function () {},
-			});
-		} else {
-			collectCommentsFromProfile(username, 1, (data) => {
-				for (let thread of data) {
-					saveCommentToDB(thread, username);
-					for (let child of thread.replies) {
-						saveCommentToDB(child, username);
-					}
-				}
-				collectCommentsFromProfile(username, 2, (data) => {
-					for (let thread of data) {
-						saveCommentToDB(thread, username);
-						for (let child of thread.replies) {
-							saveCommentToDB(child, username);
-						}
-					}
-					scrapeFinished(username, {
-						json: function () {},
-					});
-				});
-			});
-		}
-	});
-}
-
-//setInterval(scanProfiles, SCAN_PROFILES);
-
-function scrapWholeProfile(username, currentPage, res) {
-	if (currentPage >= 68) {
-		scrapeFinished(username, res);
-		return;
-	} else if (currentPage === 0) {
-		currentPage++;
-	}
-
-	User.update(
-		{ scanning: currentPage },
-		{
-			where: {
-				username: username,
-			},
-		}
-	);
-
-	for (let i = 0; i < 10; i++) {
-		let newPage = currentPage + i;
-		if (newPage >= 68) {
-			break;
-		}
-		collectCommentsFromProfile(username, newPage, (data) => {
-			if (data.length > 0) {
-				for (let thread of data) {
-					saveCommentToDB(thread, username);
-					for (let child of thread.replies) {
-						saveCommentToDB(child, username);
-					}
-				}
-				if (newPage % 10 === 0) {
-					scrapWholeProfile(username, newPage + 10, res);
-				}
-			} else if (newPage % 10 == 9) {
-				setTimeout(scrapeFinished(username, res), 5000);
-			}
-		});
-	}
-}
-
-function scrapeFinished(username, res) {
-	getStats(username).then((stats) => {
-		const date = new Date().valueOf();
-		let nextScrape = date + stats.milisecondsPerComment * 20;
-		let longest = date + MAX_SCAN_TIMEOUT;
-		if (stats.milisecondsPerComment == null || nextScrape > longest) {
-			nextScrape = longest;
-		}
 		User.update(
-			{
-				lastScrape: date,
-				nextScrape: nextScrape,
-				fullScanned: true,
-				scanning: 0,
-			},
+			{ scanning: currentPage },
 			{
 				where: {
 					username: username,
 				},
 			}
-		).then((user) => {
-			res.json({
-				msg: `The scrape on the users profile ${username} has finished :)`,
-				nextScrape: user.nextScrape,
-				lastScrape: user.lastScrape,
-			});
+		);
+
+		let pageScrapes = [];
+		for (let i = 0; i < 10; i++) {
+			let newPage = currentPage + i;
+			if (newPage > MAX_COMMENT_PAGE) {
+				break;
+			}
+			pageScrapes.push(collectCommentsFromProfile(username, newPage));
+		}
+
+		Promise.all(pageScrapes).then((pageScrapes) => {
+			let pageSaves = [];
+			for (let page of pageScrapes) {
+				if (page.length === 0) {
+					continue;
+				}
+				pageSaves.push(saveCommentPageToDB(page, username));
+			}
+
+			Promise.all(pageSaves)
+				.then(() => {
+					if (pageSaves.length < 10) {
+						return scrapeWholeProfile(
+							username,
+							MAX_COMMENT_PAGE + 69420
+						);
+					}
+					return scrapeWholeProfile(username, currentPage + 10);
+				})
+				.then((message) => {
+					// We only want the rest of this running on the base
+					if (currentPage != 1) {
+						resolve();
+					}
+					return getProfileCommentStats(username);
+				})
+				.then((stats) => {
+					const date = new Date().valueOf();
+					let nextScrape = date + stats.milisecondsPerComment * 20;
+					let longest = date + MAX_SCAN_TIMEOUT;
+					if (
+						stats.milisecondsPerComment == null ||
+						nextScrape > longest
+					) {
+						nextScrape = longest;
+					}
+					return User.update(
+						{
+							lastScrape: date,
+							nextScrape: nextScrape,
+							fullScanned: true,
+							scanning: 0,
+						},
+						{
+							where: {
+								username: username,
+							},
+						}
+					);
+				})
+				.then(() => {
+					resolve();
+				});
 		});
 	});
 }

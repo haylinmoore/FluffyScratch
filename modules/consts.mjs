@@ -12,6 +12,7 @@ const HOUR = MINUTE * 60;
 const DAY = HOUR * 24;
 const MAX_SCAN_TIMEOUT = DAY * 120;
 const SCAN_PROFILES = MINUTE / 4;
+const MAX_COMMENT_PAGE = 67;
 
 export {
 	QUEUE_ITEMS_PER_SECOND,
@@ -23,4 +24,5 @@ export {
 	MINUTE,
 	SCAN_PROFILES,
 	MAX_SCAN_TIMEOUT,
+	MAX_COMMENT_PAGE,
 };
