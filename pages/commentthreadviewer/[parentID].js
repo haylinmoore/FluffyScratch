@@ -9,11 +9,23 @@ function Comment(props) {
 			</th>
 			<th>{props.comment.username}</th>
 			<td>{props.comment.text}</td>
+			<td>{new Date(props.comment.date).toISOString()}</td>
 		</tr>
 	);
 }
 
 export default function commentthreadviewer({ Comments }) {
+	if (Comments.length === 0) {
+		Comments[0] = {
+			username: "herohamp",
+			usernameID: "9565102",
+			commentID: "-1",
+			date: new Date().valueOf(),
+			text:
+				"I am sorry, that comment thread either does not exist or is not indexed",
+			parent: "-1",
+		};
+	}
 	return (
 		<div>
 			<link
