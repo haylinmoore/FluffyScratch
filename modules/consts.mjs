@@ -11,7 +11,7 @@ const GET_USER_IDS = MINUTE * 2;
 const HOUR = MINUTE * 60;
 const DAY = HOUR * 24;
 const MAX_SCAN_TIMEOUT = DAY * 120;
-const SCAN_PROFILES = MINUTE / 4;
+const SCAN_PROFILES = MINUTE / 6;
 const MAX_COMMENT_PAGE = 67;
 
 export {
