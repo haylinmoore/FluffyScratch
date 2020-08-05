@@ -8,17 +8,17 @@ const userMozzToDBUser = (user) => {
 	};
 };
 
-const threads = 32;
+const threads = 16;
 const page = 0;
 
 function collectUsersFromPage(page) {
 	console.log("On page " + page);
-	fetch("https://scratchdb.lefty.one/v2/user/rank/global/comments/" + page)
+	if (page > 500) {
+		return;
+	}
+	fetch("https://scratchdb.lefty.one/v2/user/rank/global/followers/" + page)
 		.then((response) => response.json())
 		.then((data) => {
-			if (data.users.length === 0) {
-				return;
-			}
 			let users = [];
 			for (let user of data.users) {
 				if (user.scratch_id !== null) {
