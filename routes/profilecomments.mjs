@@ -349,6 +349,7 @@ function scanProfiles() {
 			id: { [Op.gt]: -1 },
 			scanning: 0,
 		},
+		order: [Sequelize.literal("createdAt ASC")],
 	}).then((user) => {
 		if (user === null) {
 			return;
