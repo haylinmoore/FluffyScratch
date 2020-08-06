@@ -24,23 +24,13 @@ router.get("/", (req, res) => {
 			},
 		},
 	});
-	let totalComments = Comment.count();
-
 	Promise.all([
 		userCount,
 		requestsToScratch,
 		totalRequests,
 		activeUsers,
-		totalComments,
-	]).then(
-		([
-			userCount,
-			requestsToScratch,
-			totalRequests,
-			activeUsers,
-			totalComments,
-		]) => {
-			let metricData = `
+	]).then(([userCount, requestsToScratch, totalRequests, activeUsers]) => {
+		let metricData = `
 # HELP scratch_proxy_request_total The total number of HTTP requests.
 # TYPE scratch_proxy_request_total counter
 scratch_proxy_request_total ${totalRequests.value} ${timestamp}
@@ -64,16 +54,12 @@ scratch_proxy_idrc_queue ${queue.queues.idrc.length} ${timestamp}
 # HELP scratch_proxy_reqs_to_scratch Total requests to Scratch
 # TYPE scratch_proxy_reqs_to_scratch counter
 scratch_proxy_reqs_to_scratch ${requestsToScratch.value} ${timestamp}
-# HELP scratch_proxy_total_comments Total comments collected
-# TYPE scratch_proxy_total_comments counter
-scratch_proxy_total_comments ${totalComments} ${timestamp}
 		`;
 
-			res.send(metricData);
+		res.send(metricData);
 
-			empheralData.queueAdditions = 0;
-		}
-	);
+		empheralData.queueAdditions = 0;
+	});
 });
 
 export default router;

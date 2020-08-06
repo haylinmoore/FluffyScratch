@@ -380,6 +380,6 @@ function scanProfiles() {
 	});
 }
 
-setInterval(scanProfiles, SCAN_PROFILES);
+//setInterval(scanProfiles, SCAN_PROFILES);
 
 export default router;
