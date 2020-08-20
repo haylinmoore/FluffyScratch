@@ -380,6 +380,8 @@ function scanProfiles() {
 	});
 }
 
-//setInterval(scanProfiles, SCAN_PROFILES);
+if (process.env.DEPLOYED === "hubble"){
+	setInterval(scanProfiles, SCAN_PROFILES);
+}
 
 export default router;
