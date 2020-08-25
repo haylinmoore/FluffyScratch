@@ -5,6 +5,8 @@ import {
 	QUEUE_ITEMS_PER_SECOND,
 	EHHH_ITEMS_PER_SECOND,
 } from "../modules/consts.mjs";
+import {isValidName} from "../modules/funcs.mjs";
+
 
 var router = express.Router();
 
@@ -79,10 +81,20 @@ const handleNotificationRequest = (res, username, queueType) => {
 };
 
 router.get("/v2/:username", (req, res) => {
+	if (!isValidName(req.params.username)){
+		res.json({count: 0, timeout: 100000000000})
+		return;
+	}
+
 	handleNotificationRequest(res, req.params.username, queue.queues.ehhh);
 });
 
 router.get("/v2/:username/alt", (req, res) => {
+	if (!isValidName(req.params.username)){
+		res.json({count: 0, timeout: 100000000000})
+		return;
+	}
+
 	handleNotificationRequest(res, req.params.username, queue.queues.idrc);
 });
 

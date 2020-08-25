@@ -3,6 +3,8 @@ import fetch from "node-fetch";
 import dotenv from "dotenv";
 import { GET_USER_IDS } from "./consts.mjs";
 import queue from "./queue.mjs";
+import {isValidName} from "../modules/funcs.mjs";
+
 dotenv.config();
 
 const sequelize = new Sequelize(
@@ -131,6 +133,13 @@ Comment.sync({ force: false, alter: true })
 function syncIDs() {
 	User.findAll({ where: { id: -1 } }).then((users) => {
 		users.forEach((user) => {
+
+			if (!isValidName(user.get("username"))) {
+				user.destroy();
+				console.log("Destroyed an invalid user because of Apple");
+				return;
+			}
+
 			fetch(
 				"https://scratchdb.lefty.one/v2/user/info/" +
 					user.get("username")

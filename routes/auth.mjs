@@ -3,6 +3,7 @@ import fetch from "node-fetch";
 import queue from "../modules/queue.mjs";
 import empheralData from "../modules/empheralData.mjs";
 import fs from "fs";
+import {isValidName} from "../modules/funcs.mjs";
 
 var router = express.Router();
 
@@ -31,6 +32,7 @@ router.get("/test", (req, res) => {
 router.get(
 	"/verify/v1/:username/:publicCode/:privateCode/:redirectLocation",
 	(req, res) => {
+
 		req.params.redirectLocation = Buffer.from(
 			req.params.redirectLocation,
 			"base64"
@@ -80,6 +82,10 @@ router.get(
 );
 
 router.get("/getKeys/v1/:username", (req, res) => {
+	if (!isValidName(req.params.username)){
+		res.json({error: "The username supplied is not a valid scratch username"})
+		return;
+	}
 	if (!req.query.redirect) {
 		req.query.redirect = "Zmx1ZmZ5c2NyYXRjaC5oYW1wdG9uLnB3L2F1dGgvbm9SZWY"; // If no redirect send them to fluffyscratch.hampton.pw/auth/noRef
 	}

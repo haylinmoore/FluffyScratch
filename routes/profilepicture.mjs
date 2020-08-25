@@ -1,10 +1,18 @@
 import express from "express";
 import { User } from "../modules/db.mjs";
 import fetch from "node-fetch";
+import {isValidName} from "../modules/funcs.mjs";
+
 
 var router = express.Router();
 
 router.get("/v1/:username", (req, res) => {
+
+	if (!isValidName(req.params.username)){
+		res.json({error: "The username supplied is not a valid scratch username"})
+		return;
+	}
+	
 	User.findOrCreate({
 		where: { username: req.params.username },
 		defaults: { username: req.params.username },

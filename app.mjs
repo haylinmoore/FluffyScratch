@@ -36,6 +36,12 @@ server.prepare().then(() => {
 		res.send("If you do not know what this is you should not be here <3")
 	);
 
+	app.get("/debug", (req, res) => {
+		res.json({
+			DEPLOYED: process.env.DEPLOYED
+		})
+	});
+
 	app.get("/commit", (req, res) => {
 		readLastLines.read("./.git/logs/HEAD", 1).then((lines) =>
 			res.send(`

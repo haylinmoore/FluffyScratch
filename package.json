@@ -6,7 +6,7 @@
 	"scripts": {
 		"start": "NODE_OPTIONS=--no-warnings node --experimental-modules app.mjs",
 		"build": "next build",
-		"deploy": "sudo docker build . -t 'registry.voyager1.hampton.pw/scratchproxy' && sudo docker push 'registry.voyager1.hampton.pw/scratchproxy'"
+		"deploy": "sudo docker build . -t 'registry.hamptonmoore.com/scratchproxy' && sudo docker push 'registry.hamptonmoore.com/scratchproxy'"
 	},
 	"author": "Hampton Moore",
 	"license": "MIT",

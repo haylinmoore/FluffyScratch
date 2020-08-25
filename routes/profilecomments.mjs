@@ -11,6 +11,8 @@ import {
 	MAX_COMMENT_PAGE,
 } from "../modules/consts.mjs";
 import { Comment } from "../modules/db.mjs";
+import {isValidName} from "../modules/funcs.mjs";
+
 
 dotenv.config();
 
@@ -90,6 +92,11 @@ router.get("/tojson/v1/:username/", (req, res) => {
 });
 
 router.get("/tojson/v1/:username/:page", (req, res) => {
+	if (!isValidName(req.params.username)){
+		res.json({error: "The username supplied is not a valid scratch username"})
+		return;
+	}
+
 	let { username, page } = req.params;
 
 	if (
@@ -231,6 +238,11 @@ router.get("/scrapeuser/v1/:username/status", (req, res) => {
 });
 
 router.get("/scrapeuser/v1/:username", (req, res) => {
+	if (!isValidName(req.params.username)){
+		res.json({error: "The username supplied is not a valid scratch username"})
+		return;
+	}
+
 	const username = req.params.username;
 	User.findOrCreate({
 		where: { username: username },
