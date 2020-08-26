@@ -1,9 +1,9 @@
-function Comment(props) {
+function CommentDisplay(props) {
 	return (
 		<tr>
 			<th>
 				<img
-					src={`https://fluffyscratch.hampton.pw/profilepicture/v1/${props.comment.username}`}
+					src={`/profilepicture/v1/${props.comment.username}`}
 					style={{ maxWidth: "64px" }}
 				></img>
 			</th>
@@ -44,7 +44,7 @@ export default function commentthreadviewer({ Comments }) {
 					<tbody>
 						{Comments.map((comment) => {
 							return (
-								<Comment
+								<CommentDisplay
 									comment={comment}
 									key={comment.commentID}
 								/>
@@ -62,14 +62,27 @@ export default function commentthreadviewer({ Comments }) {
 		</div>
 	);
 }
+import { Comment } from "../../modules/db.mjs";
 
 export async function getServerSideProps(context) {
-	const response = await fetch(
-		`https://fluffyscratch.hampton.pw/profilecomments/search/findby/parentID/${context.params.parentID}`
-	);
-	const json = await response.json();
+
+	const response = await Comment.findAll({
+		where: {
+			parentID: context.params.parentID,
+		},
+	});
+
+	let Comments = [];
+
+	for (let comment of response){
+		let commentSet = comment.dataValues;
+		delete commentSet.createdAt;
+		delete commentSet.updatedAt;
+		Comments.push(commentSet);
+	}
+
 
 	return {
-		props: { Comments: json }, // will be passed to the page component as props
+		props: { Comments: Comments }, // will be passed to the page component as props
 	};
 }
