@@ -78,6 +78,7 @@ export async function getServerSideProps(context) {
 		let commentSet = comment.dataValues;
 		delete commentSet.createdAt;
 		delete commentSet.updatedAt;
+		commentSet.username = commentSet.username.replace("*", "");
 		Comments.push(commentSet);
 	}
 
