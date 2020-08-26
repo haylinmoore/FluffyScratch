@@ -253,7 +253,7 @@ router.get("/scrapeuser/v1/:username", (req, res) => {
 		if (user.nextScrape < new Date().valueOf()) {
 			res.json({
 				msg: `${username} is being scraped, you can see the progress at the link below`,
-				link: `https://fluffyscratch.hampton.pw/scrapeuser/v1/${username}/status`,
+				link: `/profilecomments/scrapeuser/v1/${username}/status`,
 			});
 			scrapeWholeProfile(username, 1);
 		} else {
