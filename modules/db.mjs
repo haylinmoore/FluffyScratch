@@ -122,6 +122,8 @@ const Comment = sequelize.define("comment", {
 	profile: {
 		type: Sequelize.STRING,
 	},
+}, {
+	indexes: [{name:'parentID', fields: ['parentID'] }, {name:'username', fields: ['username'] }, {name:'profile', fields: ['profile'] }]
 });
 
 Comment.sync({ force: false, alter: true })
