@@ -18,20 +18,20 @@ router.get("/findby/parentID/:parentID", (req, res) => {
 	});
 });
 
-router.get("/findby/text/:text/:page", (req, res) => {
-	let page = req.params.page;
-	if (page < 0) {
-		page = 0;
-	}
-	Comment.findAll({
-		where: {
-			text: { [Op.like]: `%${req.params.text}%` },
-		},
-		offset: page * 30,
-		limit: 30,
-	}).then((data) => {
-		res.json(data);
-	});
-});
+// router.get("/findby/text/:text/:page", (req, res) => {
+// 	let page = req.params.page;
+// 	if (page < 0) {
+// 		page = 0;
+// 	}
+// 	Comment.findAll({
+// 		where: {
+// 			text: { [Op.like]: `%${req.params.text}%` },
+// 		},
+// 		offset: page * 30,
+// 		limit: 30,
+// 	}).then((data) => {
+// 		res.json(data);
+// 	});
+// });
 
 export default router;
