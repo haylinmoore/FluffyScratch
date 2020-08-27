@@ -357,7 +357,7 @@ function calculateNextScan(username) {
 function scanProfiles() {
 	User.findOne({
 		where: {
-			nextS1598539052367crape: { [Op.lt]: new Date().valueOf(), [Op.gt]: -2 },
+			nextScrape: { [Op.lt]: new Date().valueOf(), [Op.gt]: -2 },
 			id: { [Op.gt]: -1 },
 			scanning: 0,
 		},
