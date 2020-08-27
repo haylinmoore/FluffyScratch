@@ -14,6 +14,10 @@ const dev = process.env.NODE_ENV !== "production";
 const server = next({ dev });
 const handle = server.getRequestHandler();
 
+const startTime = new Date();
+
+console.log(`Server started at ${startTime}`);
+
 server.prepare().then(() => {
 	// Setups
 	const app = express();
@@ -38,7 +42,8 @@ server.prepare().then(() => {
 
 	app.get("/debug", (req, res) => {
 		res.json({
-			DEPLOYED: process.env.DEPLOYED
+			DEPLOYED: process.env.DEPLOYED,
+			startTime
 		})
 	});
 
