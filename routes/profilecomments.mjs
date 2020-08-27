@@ -11,8 +11,8 @@ import {
 	MAX_COMMENT_PAGE,
 } from "../modules/consts.mjs";
 import { Comment } from "../modules/db.mjs";
-import {isValidName} from "../modules/funcs.mjs";
-
+import { isValidName } from "../modules/funcs.mjs";
+import {performance} from 'perf_hooks';
 
 dotenv.config();
 
@@ -92,8 +92,10 @@ router.get("/tojson/v1/:username/", (req, res) => {
 });
 
 router.get("/tojson/v1/:username/:page", (req, res) => {
-	if (!isValidName(req.params.username)){
-		res.json({error: "The username supplied is not a valid scratch username"})
+	if (!isValidName(req.params.username)) {
+		res.json({
+			error: "The username supplied is not a valid scratch username",
+		});
 		return;
 	}
 
@@ -166,40 +168,61 @@ function saveCommentPageToDB(page, profile) {
 
 function getProfileCommentStats(profile) {
 	return new Promise((resolve, reject) => {
-		let oldestComment = Comment.min("date", {
-			where: {
-				profile,
-			},
-		});
-
-		let commentCount = Comment.count({
-			where: {
-				profile,
-			},
-		});
-
-		let topCommentors = Comment.findAll({
-			attributes: [
-				[Sequelize.fn("COUNT", Sequelize.col("username")), "count"],
-				"username",
-			],
-			group: "username",
+		let comments = Comment.findAll({
 			where: {
 				profile: profile,
 			},
-			order: [Sequelize.literal("count DESC")],
-			limit: 5,
 		});
 
-		Promise.all([oldestComment, commentCount, topCommentors])
-			.then(([oldestComment, commentCount, topCommentors]) => {
-				resolve({
-					oldestComment,
-					commentCount,
-					milisecondsPerComment:
-						(new Date().valueOf() - oldestComment) / commentCount,
-					topCommentors,
-				});
+		Promise.all([comments])
+			.then(([comments]) => {
+				let start = performance.now();
+				let stats = {
+					oldestComment: new Date().valueOf(),
+					milisecondsPerComment: 0,
+					commentCount: 0,
+					threads: {},
+					commentors: {},
+				};
+
+				for (let comment of comments) {
+					stats.commentCount++;
+
+					if (stats.commentors.hasOwnProperty(comment.username)) {
+						stats.commentors[comment.username] += 1;
+					} else {
+						stats.commentors[comment.username] = 1;
+					}
+
+					if (
+						stats.threads.hasOwnProperty(comment.parentID) &&
+						comment.parentID > -1
+					) {
+						stats.threads[comment.parentID] += 1;
+					} else {
+						stats.threads[comment.parentID] = 1;
+					}
+
+					if (comment.date < stats.oldestComment) {
+						stats.oldestComment = comment.date;
+					}
+				}
+
+				stats.milisecondsPerComment =
+					(new Date().valueOf() - stats.oldestComment) /
+					stats.commentCount;
+
+
+				stats.topCommentors = Object.entries(stats.commentors).sort( (a,b) => b[1] - a[1] ).slice(0, 5);
+
+				stats.topThreads = Object.entries(stats.threads).sort( (a,b) => b[1] - a[1] ).slice(0, 5);
+
+				delete stats.commentors;
+				delete stats.threads;
+				
+				stats.computeTime = performance.now() - start;
+
+				resolve(stats);
 			})
 			.catch((err) => {
 				console.log(err);
@@ -210,6 +233,16 @@ function getProfileCommentStats(profile) {
 
 router.get("/stats/v1/:profile/", (req, res) => {
 	getProfileCommentStats(req.params.profile).then((data) => {
+		res.json(data);
+	});
+});
+
+router.get("/rawcomments/v1/:profile", (req, res) => {
+	Comment.findAll({
+		where: {
+			profile: req.params.profile,
+		},
+	}).then((data) => {
 		res.json(data);
 	});
 });
@@ -238,8 +271,10 @@ router.get("/scrapeuser/v1/:username/status", (req, res) => {
 });
 
 router.get("/scrapeuser/v1/:username", (req, res) => {
-	if (!isValidName(req.params.username)){
-		res.json({error: "The username supplied is not a valid scratch username"})
+	if (!isValidName(req.params.username)) {
+		res.json({
+			error: "The username supplied is not a valid scratch username",
+		});
 		return;
 	}
 
@@ -357,7 +392,7 @@ function calculateNextScan(username) {
 function scanProfiles() {
 	User.findOne({
 		where: {
-			nextScrape: { [Op.lt]: new Date().valueOf(), [Op.gt]: -2 },
+			nextScrape: { [Op.lt]: new Date().valueOf() },
 			id: { [Op.gt]: -1 },
 			scanning: 0,
 		},
@@ -367,9 +402,9 @@ function scanProfiles() {
 			return;
 		}
 
+		let username = user.get("username");
 		console.log("Started Scan of " + username + " at " + new Date());
 
-		let username = user.get("username");
 		user.set("scanning", 1);
 		user.save();
 		if (user.get("fullScanned") == false) {
@@ -394,7 +429,7 @@ function scanProfiles() {
 	});
 }
 
-if (process.env.DEPLOYED === "hubble"){
+if (process.env.DEPLOYED === "hubble") {
 	setInterval(scanProfiles, SCAN_PROFILES);
 }
 
