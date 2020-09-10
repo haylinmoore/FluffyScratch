@@ -3,7 +3,7 @@ import fetch from "node-fetch";
 import dotenv from "dotenv";
 import { GET_USER_IDS } from "./consts.mjs";
 import queue from "./queue.mjs";
-import {isValidName} from "../modules/funcs.mjs";
+import { isValidName } from "../modules/funcs.mjs";
 
 dotenv.config();
 
@@ -63,7 +63,7 @@ const User = sequelize.define("user", {
 });
 
 User.sync({ force: false, alter: true })
-	.then(() => {})
+	.then(() => { })
 	.catch((err) => {
 		console.error(err);
 	});
@@ -123,11 +123,11 @@ const Comment = sequelize.define("comment", {
 		type: Sequelize.STRING,
 	},
 }, {
-	indexes: [{name:'parentID', fields: ['parentID'] }, {name:'username', fields: ['username'] }, {name:'profile', fields: ['profile'] }]
+	indexes: [{ name: 'parentID', fields: ['parentID'] }, { name: 'username', fields: ['username'] }, { name: 'profile', fields: ['profile'] }]
 });
 
 Comment.sync({ force: false, alter: true })
-	.then(() => {})
+	.then(() => { })
 	.catch((err) => {
 		console.error(err);
 	});
@@ -142,38 +142,7 @@ function syncIDs() {
 				return;
 			}
 
-			fetch(
-				"https://scratchdb.lefty.one/v2/user/info/" +
-					user.get("username")
-			)
-				.then((response) => response.json())
-				.then((data) => {
-					if (data.error === "notfound" || data.id == null) {
-						queue
-							.add(
-								queue.TYPES.GetUserProfile,
-								{
-									username: user.get("username"),
-								},
-								queue.queues.idrc
-							)
-							.then((profile) => {
-								if (profile.code === "NotFound") {
-									user.destroy();
-								} else {
-									user.set("id", profile.id);
-									user.save();
-								}
-							});
-						return;
-					} else {
-						user.set("id", data.id);
-						user.save();
-					}
-				})
-				.catch((err) => {
-					console.log(err);
-				});
+
 		});
 	});
 }
