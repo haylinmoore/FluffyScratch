@@ -5,32 +5,31 @@ const Op = Sequelize.Op;
 import queue from "../modules/queue.mjs";
 import { ONLINE_CUTOFF_TIME } from "../modules/consts.mjs";
 import empheralData from "../modules/empheralData.mjs";
-var router = express.Router();
 
-router.get("/", (req, res) => {
-	let timestamp = new Date().getTime();
+export default function Metrics(req, res) {
+    let timestamp = new Date().getTime();
 
-	let userCount = User.count();
-	let requestsToScratch = Analytic.findOne({
-		where: { name: "requestsToScratch" },
-	});
-	let totalRequests = Analytic.findOne({
-		where: { name: "totalRequests" },
-	});
-	let activeUsers = User.count({
-		where: {
-			lastKeepAlive: {
-				[Op.gte]: new Date().valueOf() - ONLINE_CUTOFF_TIME,
-			},
-		},
-	});
-	Promise.all([
-		userCount,
-		requestsToScratch,
-		totalRequests,
-		activeUsers,
-	]).then(([userCount, requestsToScratch, totalRequests, activeUsers]) => {
-		let metricData = `
+    let userCount = User.count();
+    let requestsToScratch = Analytic.findOne({
+        where: { name: "requestsToScratch" },
+    });
+    let totalRequests = Analytic.findOne({
+        where: { name: "totalRequests" },
+    });
+    let activeUsers = User.count({
+        where: {
+            lastKeepAlive: {
+                [Op.gte]: new Date().valueOf() - ONLINE_CUTOFF_TIME,
+            },
+        },
+    });
+    Promise.all([
+        userCount,
+        requestsToScratch,
+        totalRequests,
+        activeUsers,
+    ]).then(([userCount, requestsToScratch, totalRequests, activeUsers]) => {
+        let metricData = `
 # HELP scratch_proxy_request_total The total number of HTTP requests.
 # TYPE scratch_proxy_request_total counter
 scratch_proxy_request_total ${totalRequests.value} ${timestamp}
@@ -56,10 +55,9 @@ scratch_proxy_idrc_queue ${queue.queues.idrc.length} ${timestamp}
 scratch_proxy_reqs_to_scratch ${requestsToScratch.value} ${timestamp}
 		`;
 
-		res.send(metricData);
+        res.send(metricData);
 
-		empheralData.queueAdditions = 0;
-	});
-});
+        empheralData.queueAdditions = 0;
+    });
+};
 
-export default router;

@@ -58,8 +58,8 @@ app.use("/auth", auth);
 import profilecomments from "./routes/profilecomments.mjs";
 app.use("/profilecomments", profilecomments);
 
-import metrics from "./routes/metrics.mjs";
-app.use("/metrics", metrics);
+import Metrics from "./routes/metrics.mjs";
+app.use("/metrics", Metrics);
 
 /*
     /user routes
