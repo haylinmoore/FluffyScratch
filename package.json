@@ -1,26 +1,22 @@
 {
-	"name": "scratchproxy",
-	"version": "1.0.0",
-	"description": "",
-	"main": "app.js",
-	"scripts": {
-		"start": "NODE_OPTIONS=--no-warnings node --experimental-modules app.mjs",
-		"build": "next build",
-		"deploy": "sudo docker build . -t 'registry.hamptonmoore.com/scratchproxy' && sudo docker push 'registry.hamptonmoore.com/scratchproxy'"
-	},
-	"author": "Hampton Moore",
-	"license": "MIT",
-	"dependencies": {
-		"cheerio": "^1.0.0-rc.3",
-		"dotenv": "^8.2.0",
-		"express": "^4.17.1",
-		"fs": "0.0.1-security",
-		"mysql2": "^2.1.0",
-		"next": "^9.5.1",
-		"node-fetch": "^2.6.0",
-		"react": "^16.13.1",
-		"react-dom": "^16.13.1",
-		"read-last-lines": "^1.7.2",
-		"sequelize": "^6.3.3"
-	}
+    "name": "scratchproxy",
+    "version": "1.0.0",
+    "description": "",
+    "main": "app.js",
+    "scripts": {
+        "start": "NODE_OPTIONS=--no-warnings node --experimental-modules app.mjs",
+        "deploy": "sudo docker build . -t 'registry.hamptonmoore.com/scratchproxy' && sudo docker push 'registry.hamptonmoore.com/scratchproxy'"
+    },
+    "author": "Hampton Moore",
+    "license": "MIT",
+    "dependencies": {
+        "cheerio": "^1.0.0-rc.3",
+        "dotenv": "^8.2.0",
+        "express": "^4.17.1",
+        "fs": "0.0.1-security",
+        "mysql2": "^2.1.0",
+        "node-fetch": "^2.6.0",
+        "read-last-lines": "^1.7.2",
+        "sequelize": "^6.3.3"
+    }
 }
