@@ -1,7 +1,6 @@
 import express from "express";
 import empheralData from "./modules/empheralData.mjs";
 import { Analytic } from "./modules/db.mjs";
-import readLastLines from "read-last-lines";
 import isValidName from "./modules/isValidName.mjs";
 
 const port = parseInt(process.env.PORT, 10) || 3000;
@@ -26,8 +25,6 @@ app.use(function (req, res, next) {
     }
 });
 
-app.use("/static", express.static("static"));
-
 app.get("/", (req, res) =>
     res.send("If you do not know what this is you should not be here <3")
 );
@@ -40,15 +37,7 @@ app.get("/debug", (req, res) => {
 });
 
 app.get("/commit", (req, res) => {
-    readLastLines.read("./.git/logs/HEAD", 1).then((lines) =>
-        res.send(`
-				${lines
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;")}`)
-    );
+    res.sendFile('commit.txt', { root: "." });
 });
 
 import auth from "./routes/auth.mjs";
