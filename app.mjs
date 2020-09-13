@@ -61,6 +61,10 @@ app.use("/profilecomments", profilecomments);
 import metrics from "./routes/metrics.mjs";
 app.use("/metrics", metrics);
 
+/*
+    /user routes
+*/
+
 app.use("/user/:username", function (req, res, next) {
     if (isValidName(req.params.username)) {
         next();
@@ -85,6 +89,12 @@ import userUsernameNotificationsAlt from "./routes/user/[username]/notifications
 app.use("/user/:username/notifications/alt", userUsernameNotificationsAlt);
 app.use("/notifications/v2/:username/alt", userUsernameNotificationsAlt); // Temporary for backwards compatibility
 
+/*
+    /comments routes
+*/
+
+import commentsFindByParentID from "./routes/comments/findBy/parentID/index.mjs";
+app.use("/comments/findBy/parentID/:parentID", commentsFindByParentID);
 
 app.listen(port, () =>
     console.log(`Example app listening at http://localhost:${port}`)

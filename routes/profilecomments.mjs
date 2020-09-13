@@ -18,9 +18,7 @@ dotenv.config();
 
 var router = express.Router();
 
-import searchcomments from "./searchcomments.mjs";
 import { User } from "../modules/db.mjs";
-router.use("/search", searchcomments);
 
 const convertCommentToJSON = function (comment, head) {
     let obj = {
