@@ -4,5 +4,5 @@
 
 */
 export default function userUsernameTest(req, res) {
-	res.send("Hello " + req.params.username);
+    res.json({ msg: "Hello " + req.params.username });
 }

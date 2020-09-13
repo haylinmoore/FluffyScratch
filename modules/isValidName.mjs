@@ -1,7 +1,5 @@
 const validNameRegex = RegExp(/^[\w-]{3,20}$/);
 
-const isValidName = (name) => {
+export default function isValidName(name) {
     return validNameRegex.test(name);
 }
-
-export {isValidName};

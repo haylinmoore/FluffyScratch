@@ -2,6 +2,7 @@ import express from "express";
 import empheralData from "./modules/empheralData.mjs";
 import { Analytic } from "./modules/db.mjs";
 import readLastLines from "read-last-lines";
+import isValidName from "./modules/isValidName.mjs";
 
 const port = parseInt(process.env.PORT, 10) || 3000;
 const dev = process.env.NODE_ENV !== "production";
@@ -50,9 +51,6 @@ app.get("/commit", (req, res) => {
     );
 });
 
-import notifications from "./routes/notifications.mjs";
-app.use("/notifications", notifications);
-
 import auth from "./routes/auth.mjs";
 app.use("/auth", auth);
 
@@ -63,6 +61,14 @@ app.use("/profilecomments", profilecomments);
 import metrics from "./routes/metrics.mjs";
 app.use("/metrics", metrics);
 
+app.use("/user/:username", function (req, res, next) {
+    if (isValidName(req.params.username)) {
+        next();
+    } else {
+        res.json({ error: "Username is not a valid scratch username /^[\w-]{3,20}$/" });
+    }
+});
+
 import userUsernameTest from "./routes/user/[username]/test.mjs";
 app.use("/user/:username/test", userUsernameTest);
 
@@ -70,6 +76,15 @@ app.use("/user/:username/test", userUsernameTest);
 import userUsernameProfilePicture from "./routes/user/[username]/profile/picture.mjs";
 app.use("/user/:username/profile/picture/", userUsernameProfilePicture);
 app.use("/profilepicture/v1/:username", userUsernameProfilePicture); // Temporary for backwards compatibility
+
+// Notifications API
+import userUsernameNotifications from "./routes/user/[username]/notifications/index.mjs";
+app.use("/user/:username/notifications", userUsernameNotifications);
+app.use("/notifications/v2/:username", userUsernameNotifications); // Temporary for backwards compatibility 
+import userUsernameNotificationsAlt from "./routes/user/[username]/notifications/alt.mjs";
+app.use("/user/:username/notifications/alt", userUsernameNotificationsAlt);
+app.use("/notifications/v2/:username/alt", userUsernameNotificationsAlt); // Temporary for backwards compatibility
+
 
 app.listen(port, () =>
     console.log(`Example app listening at http://localhost:${port}`)
