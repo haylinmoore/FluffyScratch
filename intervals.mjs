@@ -51,7 +51,7 @@ function scanProfiles() {
 
 let scanInterval;
 
-if (process.env.DEPLOYED === "hubble" || true) {
+if (process.env.DEPLOYED === "hubble") {
     scanInterval = setInterval(scanProfiles, SCAN_PROFILES);
 }
 
