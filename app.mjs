@@ -8,6 +8,8 @@ const startTime = new Date();
 
 console.log(`Server started at ${startTime}`);
 
+import { scanInterval } from "./intervals.mjs";
+
 // Setups
 const app = express();
 

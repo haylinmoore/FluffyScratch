@@ -1,3 +1,14 @@
+import Sequelize from "sequelize";
+const Op = Sequelize.Op;
+import {
+    SCAN_PROFILES,
+} from "./modules/consts.mjs";
+import { User } from "./modules/db.mjs";
+import saveCommentPageToDB from "./modules/saveCommentPageToDB.mjs";
+import scrapeWholeProfile from "./modules/scrapeWholeProfile.mjs";
+import collectCommentsFromProfilePage from "./modules/collectCommentsFromProfilePage.mjs";
+import calculateNextScan from "./modules/calculateNextScan.mjs";
+
 function scanProfiles() {
     User.findOne({
         where: {
@@ -21,12 +32,12 @@ function scanProfiles() {
         } else {
             let pages = [];
 
-            collectCommentsFromProfile(username, 1)
+            collectCommentsFromProfilePage(username, 1)
                 .then((comments) => {
                     return saveCommentPageToDB(comments, username);
                 })
                 .then(() => {
-                    return collectCommentsFromProfile(username, 2);
+                    return collectCommentsFromProfilePage(username, 2);
                 })
                 .then((comments) => {
                     return saveCommentPageToDB(comments, username);
@@ -38,6 +49,10 @@ function scanProfiles() {
     });
 }
 
-if (process.env.DEPLOYED === "hubble") {
-    setInterval(scanProfiles, SCAN_PROFILES);
+let scanInterval;
+
+if (process.env.DEPLOYED === "hubble" || true) {
+    scanInterval = setInterval(scanProfiles, SCAN_PROFILES);
 }
+
+export { scanInterval };
