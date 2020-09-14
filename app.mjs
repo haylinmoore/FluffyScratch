@@ -1,10 +1,8 @@
 import express from "express";
-import empheralData from "./modules/empheralData.mjs";
 import { Analytic } from "./modules/db.mjs";
 import isValidName from "./modules/isValidName.mjs";
 
 const port = parseInt(process.env.PORT, 10) || 3000;
-const dev = process.env.NODE_ENV !== "production";
 
 const startTime = new Date();
 
