@@ -41,10 +41,6 @@ app.get("/commit", (req, res) => {
 import auth from "./routes/auth.mjs";
 app.use("/auth", auth);
 
-
-import profilecomments from "./routes/profilecomments.mjs";
-app.use("/profilecomments", profilecomments);
-
 import Metrics from "./routes/metrics.mjs";
 app.use("/metrics", Metrics);
 
@@ -75,6 +71,13 @@ app.use("/notifications/v2/:username", userUsernameNotifications); // Temporary 
 import userUsernameNotificationsAlt from "./routes/user/[username]/notifications/alt.mjs";
 app.use("/user/:username/notifications/alt", userUsernameNotificationsAlt);
 app.use("/notifications/v2/:username/alt", userUsernameNotificationsAlt); // Temporary for backwards compatibility
+
+// Scrape user profile
+import userUsernameProfileCommentsScrape from "./routes/user/[username]/profile/comments/scrape/index.mjs";
+app.use("/user/:username/profile/comments/scrape", userUsernameProfileCommentsScrape);
+import userUsernameProfileCommentsStats from "./routes/user/[username]/profile/comments/stats.mjs";
+app.use("/user/:username/profile/comments/stats", userUsernameProfileCommentsStats);
+
 
 /*
     /comments routes
