@@ -13,14 +13,15 @@ import { scanInterval } from "./intervals.mjs";
 // Setups
 const app = express();
 
-const asyncMiddleware = (fn) =>
-    (req, res, next) => {
+const asyncMiddleware = function (fn) {
+    return function (req, res) {
         Promise.resolve(fn(req, res))
             .catch((e) => {
                 console.log(`Error on ${req.originalUrl}: ${e.toString()}`);
-                res.json({ msg: "error, please send a screenshot or copy paste of this page to Hampton Moore, @herohamp on Scratch, @herohamp_ on Twitter, Email is me (at) hampton (dot) pw, or make an issue on the Github repo https://github.com/hamptonmoore/FluffyScratch/issues.", error: e.toString() })
+                res.json({ msg: "error, please send a screenshot or copy paste of this page to Hampton Moore, @herohamp on Scratch, @herohamp_ on Twitter, Email is me (at) hampton (dot) pw, or make an issue on the Github repo https://github.com/hamptonmoore/FluffyScratch/issues.", error: e.toString(), url: req.originalUrl })
             });
     };
+};
 
 
 app.use(function (req, res, next) {
