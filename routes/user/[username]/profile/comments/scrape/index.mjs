@@ -15,9 +15,7 @@ export default async function userUsernameScrape(req, res) {
             msg: `${username} is being scraped`,
             status: `started`
         });
-        scrapeWholeProfile(username, 1).catch((e) => {
-            throw e;
-        })
+        await scrapeWholeProfile(username, 1);
     } else if (user.scanning > 0) {
         res.json({ msg: `${username}'s profile comments are currently being scanned and is on pages ${user.scanning}-${user.scanning + 10}`, page: user.scanning, status: "scanning" })
     } else {
