@@ -1,4 +1,5 @@
 import Sequelize from "sequelize";
+const Op = Sequelize.Op;
 import fetch from "node-fetch";
 import dotenv from "dotenv";
 import { GET_USER_IDS } from "./consts.mjs";
@@ -63,7 +64,18 @@ const User = sequelize.define("user", {
 });
 
 User.sync({ force: false, alter: true })
-    .then(() => { })
+    .then(() => {
+        User.update(
+            {
+                scanning: 0,
+            },
+            {
+                where: {
+                    scanning: { [Op.not]: 0 },
+                },
+            }
+        );
+    })
     .catch((err) => {
         console.error(err);
     });
