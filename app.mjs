@@ -13,6 +13,16 @@ import { scanInterval } from "./intervals.mjs";
 // Setups
 const app = express();
 
+const asyncMiddleware = (fn) =>
+    (req, res, next) => {
+        Promise.resolve(fn(req, res))
+            .catch((e) => {
+                console.log(`Error on ${req.originalUrl}: ${e.toString()}`);
+                res.json({ msg: "error, please send a screenshot or copy paste of this page to Hampton Moore, @herohamp on Scratch, @herohamp_ on Twitter, Email is me (at) hampton (dot) pw, or make an issue on the Github repo https://github.com/hamptonmoore/FluffyScratch/issues.", error: e.toString() })
+            });
+    };
+
+
 app.use(function (req, res, next) {
     res.header("Access-Control-Allow-Origin", "*"); // update to match the domain you will make the request from
     res.header(
@@ -28,6 +38,8 @@ app.use(function (req, res, next) {
 app.get("/", (req, res) =>
     res.send("If you do not know what this is you should not be here <3")
 );
+
+app.get("/testError", asyncMiddleware(async function route(req, res) { throw "Error testing"; }))
 
 app.get("/debug", (req, res) => {
     res.json({
@@ -59,26 +71,26 @@ app.use("/user/:username", function (req, res, next) {
 });
 
 import userUsernameTest from "./routes/user/[username]/test.mjs";
-app.use("/user/:username/test", userUsernameTest);
+app.use("/user/:username/test", asyncMiddleware(userUsernameTest));
 
 // Profile picture APIs
 import userUsernameProfilePicture from "./routes/user/[username]/profile/picture.mjs";
-app.use("/user/:username/profile/picture/", userUsernameProfilePicture);
-app.use("/profilepicture/v1/:username", userUsernameProfilePicture); // Temporary for backwards compatibility
+app.use("/user/:username/profile/picture/", asyncMiddleware(userUsernameProfilePicture));
+app.use("/profilepicture/v1/:username", asyncMiddleware(userUsernameProfilePicture)); // Temporary for backwards compatibility
 
 // Notifications API
 import userUsernameNotifications from "./routes/user/[username]/notifications/index.mjs";
-app.use("/user/:username/notifications", userUsernameNotifications);
-app.use("/notifications/v2/:username", userUsernameNotifications); // Temporary for backwards compatibility 
+app.use("/user/:username/notifications", asyncMiddleware(userUsernameNotifications));
+app.use("/notifications/v2/:username", asyncMiddleware(userUsernameNotifications)); // Temporary for backwards compatibility 
 import userUsernameNotificationsAlt from "./routes/user/[username]/notifications/alt.mjs";
-app.use("/user/:username/notifications/alt", userUsernameNotificationsAlt);
-app.use("/notifications/v2/:username/alt", userUsernameNotificationsAlt); // Temporary for backwards compatibility
+app.use("/user/:username/notifications/alt", asyncMiddleware(userUsernameNotificationsAlt));
+app.use("/notifications/v2/:username/alt", asyncMiddleware(userUsernameNotificationsAlt)); // Temporary for backwards compatibility
 
 // Scrape user profile
 import userUsernameProfileCommentsScrape from "./routes/user/[username]/profile/comments/scrape/index.mjs";
-app.use("/user/:username/profile/comments/scrape", userUsernameProfileCommentsScrape);
+app.use("/user/:username/profile/comments/scrape", asyncMiddleware(userUsernameProfileCommentsScrape));
 import userUsernameProfileCommentsStats from "./routes/user/[username]/profile/comments/stats.mjs";
-app.use("/user/:username/profile/comments/stats", userUsernameProfileCommentsStats);
+app.use("/user/:username/profile/comments/stats", asyncMiddleware(userUsernameProfileCommentsStats));
 
 
 /*
