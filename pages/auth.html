@@ -11,6 +11,11 @@
 			.btn-large {
 				background-color: #4d97ff !important;
 			}
+
+			#publicCode {
+				color: #4d97ff;
+				font-size: 2em;
+			}
 		</style>
 	</head>
 	<body>
@@ -23,12 +28,10 @@
 		</nav>
 		<div class="container">
 			<h4>
-				Hello, to login as the user "{{username}}" please copy the
-				following number "{{publicCode}}". <br />
-				Now click the button below labeled "Visit Project" to visit a
-				Scratch Project. <br />
-				Once there paste the previously copied number and submit.
-				<br />When you are back here press the other button labeled "I
+				Your code is <span id="publicCode">{{publicCode}}</span>. Please copy this number.<br />
+				Please click the button below labeled "Visit Project" to the authentication Scratch Project. <br /><br />
+				Once there paste the number you just copied and and submit.
+				<br /><br />When you are back here press the other button labeled "I
 				have finished". <br /><br />
 				<a
 					class="btn btn-large"
