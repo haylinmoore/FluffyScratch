@@ -13,6 +13,7 @@ const DAY = HOUR * 24;
 const MAX_SCAN_TIMEOUT = DAY * 120;
 const SCAN_PROFILES = MINUTE / 6;
 const MAX_COMMENT_PAGE = 67;
+const PORT = parseInt(process.env.PORT, 10) || 3000;
 
 export {
 	QUEUE_ITEMS_PER_SECOND,
@@ -25,4 +26,5 @@ export {
 	SCAN_PROFILES,
 	MAX_SCAN_TIMEOUT,
 	MAX_COMMENT_PAGE,
+	PORT
 };

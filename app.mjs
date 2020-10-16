@@ -1,8 +1,9 @@
 import express from "express";
 import { Analytic } from "./modules/db.mjs";
 import isValidName from "./modules/isValidName.mjs";
+import {PORT} from "./modules/consts.mjs"
 
-const port = parseInt(process.env.PORT, 10) || 3000;
+const port = PORT;
 
 const startTime = new Date();
 
@@ -53,8 +54,21 @@ app.get("/commit", (req, res) => {
     res.sendFile('commit.txt', { root: "." });
 });
 
-import auth from "./routes/auth.mjs";
-app.use("/auth", auth);
+/*
+    /auth routes
+ */
+
+import authGetKeysv1Username from "./routes/auth/getKeys/v1/[username].mjs";
+app.use("/auth/getKeys/v1/:username", asyncMiddleware(authGetKeysv1Username));
+
+import authVerifyV1 from "./routes/auth/verify/v1.mjs";
+app.use("/auth/verify/v1/:username/:publicCode/:privateCode/:redirectLocation", asyncMiddleware(authVerifyV1));
+
+import authTest from "./routes/auth/test.mjs";
+app.use("/auth/test", asyncMiddleware(authTest));
+
+import noRef from "./routes/auth/noRef.mjs";
+app.use("/auth/noRef", asyncMiddleware(noRef));
 
 import Metrics from "./routes/metrics.mjs";
 app.use("/metrics", Metrics);
