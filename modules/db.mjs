@@ -144,6 +144,26 @@ Comment.sync({ force: false, alter: true })
         console.error(err);
     });
 
+
+const Auth = sequelize.define("auth", {
+    publicCode: {
+        type: Sequelize.INTEGER,
+    },
+    privateCode: {
+        type: Sequelize.BIGINT,
+        primaryKey: true,
+    },
+    redirectLocation: {
+        type: Sequelize.STRING(2048),
+    }
+});
+
+Auth.sync({ force: false, alter: true })
+    .then(() => { })
+    .catch((err) => {
+        console.error(err);
+    });
+
 function syncIDs() {
     User.findAll({ where: { id: -1 } }).then((users) => {
         users.forEach((user) => {
@@ -159,7 +179,18 @@ function syncIDs() {
     });
 }
 
+function cleanupAuth(){
+    Auth.destroy({
+        where: {
+            updatedAt: {
+                [Op.lt]: new Date(new Date().getTime() - (5 * 60000)),
+            },
+        }
+    })
+}
+
+setInterval(cleanupAuth, 1000 * 60);
 setInterval(syncIDs, GET_USER_IDS);
 setTimeout(syncIDs, 1000);
 
-export { User, Analytic, Comment };
+export { User, Analytic, Comment, Auth };

@@ -61,11 +61,20 @@ app.get("/commit", (req, res) => {
 import authGetKeysv1Username from "./routes/auth/getKeys/v1/[username].mjs";
 app.use("/auth/getKeys/v1/:username", asyncMiddleware(authGetKeysv1Username));
 
+import authGetKeysv2 from "./routes/auth/getKeys/v2.mjs";
+app.use("/auth/getKeys/v2", asyncMiddleware(authGetKeysv2));
+
 import authVerifyV1 from "./routes/auth/verify/v1.mjs";
 app.use("/auth/verify/v1/:username/:publicCode/:privateCode/:redirectLocation", asyncMiddleware(authVerifyV1));
 
+import authVerifyV2 from "./routes/auth/verify/v2.mjs";
+app.use("/auth/verify/v2/:privateCode", asyncMiddleware(authVerifyV2));
+
 import authTest from "./routes/auth/test.mjs";
 app.use("/auth/test", asyncMiddleware(authTest));
+
+import authTest2 from "./routes/auth/test2.mjs";
+app.use("/auth/test2", asyncMiddleware(authTest2));
 
 import noRef from "./routes/auth/noRef.mjs";
 app.use("/auth/noRef", asyncMiddleware(noRef));
