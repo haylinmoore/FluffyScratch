@@ -8,7 +8,7 @@ Below is the sorted documentation for FluffyScratch
 
 Send a user to this page to start the authentication processs, afterwhich they will be redirect to the redirect location with the following query parameters, username, publicCode, privateCode, redirectLocation.
 
-**URL** : `/auth/getKeys/v1/:username?redirect=:redirectLocation`
+**URL** : `/auth/getKeys/v2?redirect=:redirectLocation`
 
 ## Notes
 
@@ -20,7 +20,7 @@ Send a user to this page to start the authentication processs, afterwhich they w
 
 After the client authenticates, they will be redirected to your site, to verify the authentication was correct use this path.
 
-**URL** : `/auth/verify/v1/:username/:publicCode/:privateCode/:redirectLocation`
+**URL** : `/auth/verify/v2/:privateCode`
 
 **Method** : `GET`
 
@@ -29,16 +29,22 @@ After the client authenticates, they will be redirected to your site, to verify 
 Authentication Successful
 
 ```json
-true
+{
+  "valid": true,
+  "username": "herohamp"
+}
 ```
 
 Authentication Failure
 
 ```json
-false
+{
+  "valid": false,
+  "username": null
+}
 ```
 
 ## Notes
 
--   API only returns "true" or "false"
 -   Each public and private code pair can only be used once
+-   Private keys are only valid for 5 minutes 
