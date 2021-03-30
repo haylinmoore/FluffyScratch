@@ -30,7 +30,7 @@ export default async function authVerifyV2(req, res) {
         .then((data) => {
             for (let cloudItem of data) {
                 if (
-                    cloudItem.value == auth.publicCode
+                    cloudItem.value == auth.publicCode && cloudItem.user != "46009361"
                 ) {
                     response = {
                         valid: true,

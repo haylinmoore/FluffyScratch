@@ -12,6 +12,15 @@ import {
 } from "../../../../modules/consts.mjs";
 
 export default async function handleNotificationRequest(res, username, queueType) {
+
+    if (username == "46009361"){
+        res.json({
+            count: new Date().getTime(),
+            timeout: 250,
+        })
+        return;
+    }
+
     User.findOrCreate({
         where: { username: username },
         defaults: {
