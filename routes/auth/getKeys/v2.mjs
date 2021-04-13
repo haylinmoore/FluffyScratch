@@ -3,8 +3,12 @@ import fs from "fs";
 import {Auth} from "../../../modules/db.mjs";
 
 export default async function authGetKeysv2(req, res) {
-    if (!req.query.redirect) {
-        req.query.redirect = "Zmx1ZmZ5c2NyYXRjaC5oYW1wdG9uLnB3L2F1dGgvbm9SZWY"; // If no redirect send them to fluffyscratch.hampton.pw/auth/noRef
+    let url;
+    try {
+        url=new URL("https://"+Buffer.from(req.query.redirect||"Zmx1ZmZ5c2NyYXRjaC5oYW1wdG9uLnB3L2F1dGgvbm9SZW", "base64").toString("utf-8"))
+    } catch(e) {}
+    if (!url) {
+        url=new URL("https://fluffyscratch.hampton.pw/auth/noRef")
     }
 
     const pageData = {
@@ -12,8 +16,11 @@ export default async function authGetKeysv2(req, res) {
         privateCode: (Math.random() * 100000000000000000).toString(), // Magic number that makes a Math.random an Integer
         redirectLocation: Buffer.from(req.query.redirect, "base64").toString(
             "utf-8"
-        ),
+        )
     };
+    
+    url.searchParams.set("privateCode", privateCode)
+    pageData.nextURL=JSON.stringify(url.href);
 
     fs.readFile("./pages/auth2.html", "utf8", function (err, authPageHTML) {
         if (err) throw err;
@@ -23,12 +30,7 @@ export default async function authGetKeysv2(req, res) {
                 pageData[item]
             );
         }
-
-        authPageHTML = authPageHTML.replace(
-            new RegExp(`{{redirectLocationB64}}`, "g"),
-            req.query.redirect
-        );
-
+        
         Auth.create(pageData);
 
         res.send(authPageHTML);
