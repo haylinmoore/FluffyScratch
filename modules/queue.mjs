@@ -68,7 +68,7 @@ setInterval(() => {
 		case queue.TYPES.Notifications:
 			fetch(
 				`https://api.scratch.mit.edu/users/${latestQueue.data.username}/messages/count?` +
-				Math.random()
+				Math.random(), { headers: { "User-Agent": "Mozilla 5.0" } }
 			)
 				.then((response) => response.json())
 				.then((data) => {
