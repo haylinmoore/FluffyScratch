@@ -5,7 +5,8 @@ export default async function authVerifyV2(req, res) {
 
     let response = {
         valid: false,
-        username: null
+        username: null,
+        redirect: null
     }
     const auth = await Auth.findOne({where: {privateCode: req.params.privateCode}})
 
@@ -34,7 +35,8 @@ export default async function authVerifyV2(req, res) {
                 ) {
                     response = {
                         valid: true,
-                        username: cloudItem.user
+                        username: cloudItem.user,
+                        redirect: auth.redirectLocation
                     }
                     res.json(response);
                     return;
