@@ -41,7 +41,8 @@ Authentication Failure
 ```json
 {
   "valid": false,
-  "username": null
+  "username": null,
+  "redirect": null
 }
 ```
 
