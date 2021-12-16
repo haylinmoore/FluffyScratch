@@ -32,7 +32,7 @@ Authentication Successful
 {
   "valid": true,
   "username": "herohamp",
-  "redirect": "Zmx1ZmZ5c2NyYXRjaC5oYW1wdG9uLnB3L2F1dGgvdGVzdA"
+  "redirect": "fluffyscratch.hampton.pw/auth/test"
 }
 ```
 
