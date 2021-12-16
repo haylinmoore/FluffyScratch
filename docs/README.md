@@ -31,7 +31,8 @@ Authentication Successful
 ```json
 {
   "valid": true,
-  "username": "herohamp"
+  "username": "herohamp",
+  "redirect": "Zmx1ZmZ5c2NyYXRjaC5oYW1wdG9uLnB3L2F1dGgvdGVzdA"
 }
 ```
 
