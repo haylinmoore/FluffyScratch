@@ -36,7 +36,7 @@ queue.add = function (type, data, placement) {
 	});
 };
 
-setInterval(() => {
+setInterval(async () => {
 	if (queue.queueItemsProcessed >= QUEUE_ITEMS_PER_SECOND) {
 		queue.queueItemsProcessed = 0;
 		queue.ehhhItemsProcessed = 0;
@@ -89,13 +89,13 @@ setInterval(() => {
 				});
 			break;
 		case queue.TYPES.CloudDataVerification:
-			fetch(
+			let cloud = await (await fetch(
 				`https://clouddata.scratch.mit.edu/logs?projectid=${AUTH_CLOUD_PROJECT}&limit=10&offset=0`
-			)
-				.then((response) => response.json())
-				.then((data) => {
-					latestQueue.resolve(data);
-				});
+			)).json();
+			let comments = await (await fetch(
+				`https://api.scratch.mit.edu/users/herohamp/projects/${AUTH_CLOUD_PROJECT}/comments?offset=0&limit=40`
+			)).json();
+			latestQueue.resolve(cloud);
 			break;
 		case queue.TYPES.GetUserProfile:
 			fetch(
