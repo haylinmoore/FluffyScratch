@@ -1,63 +1,185 @@
+<!DOCTYPE html>
 <html>
-	<head>
-		<title>FluffyScratch Auth</title>
-		<link
-			rel="stylesheet"
-			href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"
-		/>
-		<style>
-			.nav-wrapper,
-			.btn,
-			.btn-large {
-				background-color: #4d97ff !important;
-			}
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FluffyScratch Auth</title>
+    <style>
+      @import url("https://res.cloudinary.com/finnhvman/raw/upload/matter/matter-0.2.2.min.css");
 
-			#publicCode {
-				color: #4d97ff;
-				font-size: 2em;
-			}
-		</style>
-	</head>
-	<body>
-		<nav>
-			<div class="nav-wrapper">
-				<a href="#" class="brand-logo center"
-					>FluffyScratch Authentication</a
-				>
-			</div>
-		</nav>
-		<div class="container">
-			<h4>
-				Your code is <span id="publicCode">{{publicCode}}</span>. Please copy this number.<br />
-				Please click the button below labeled "Visit Project" to the authentication Scratch Project. <br /><br />
-				Once there paste the number you just copied and and submit.
-				<br /><br />When you are back here press the other button labeled "I
-				have finished". <br /><br />
-				<a
-					class="btn btn-large"
-					target="_blank"
-					id="visit"
-					href="https://scratch.mit.edu/projects/413751680/"
-					>Visit Project</a
-				>
-				<a
-					class="btn btn-large"
-					id="finished"
-					href="https://{{redirectLocation}}?privateCode={{privateCode}}"
-					>I have finished</a
-				>
-			</h4>
-			<br /><br /><br />
-			<h5>
-				FluffyScratch was made with ♥ by
-				<a href="https://hamptonmoore.com" target="_blank">Hampton</a>
-			</h5>
-			<h6>
-				Disclaimer: FluffyScratch and its many services are in no way
-				owned, operated, or endorsed by Scratch or any members of the
-				Scratch Team
-			</h6>
-		</div>
+      .login {
+        width: 100%;
+        max-width: 24rem;
+        overflow: hidden;
+        padding: 0.5rem;
+        display: grid;
+        flex-direction: column;
+        border-radius: 0.25rem;
+        box-shadow: 0px 2px 1px -1px rgb(0 0 0 / 20%),
+          0px 1px 1px 0px rgb(0 0 0 / 14%), 0px 1px 3px 0px rgb(0 0 0 / 12%);
+        border-top: 0.25rem solid #2196f3;
+        text-align: center;
+        grid-gap: 1rem;
+        background: #fff;
+      }
 
-	</body>
+      body,
+      html {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: system-ui, sans-serif;
+        flex-direction: column;
+        background: #f2f4f9;
+      }
+
+      h1 {
+        margin: 0.5rem 0;
+        font-weight: normal;
+        font-size: 1.5rem;
+        color: #1565c0;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      footer {
+        max-width: 24rem;
+        width: 100%;
+        margin-top: 1rem;
+        text-align: right;
+        font-size: 0.85rem;
+        opacity: 0.75;
+        display: grid;
+        grid-gap: 0.5rem;
+        padding: 0 0.25rem;
+      }
+
+      footer a {
+        color: inherit;
+      }
+
+      nav {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        padding: 0.5rem;
+      }
+
+      #publicCodeWrapper {
+        width: 14rem;
+        justify-self: center;
+      }
+
+      .login > * {
+        margin: 0;
+      }
+
+      body {
+        padding: 0.5rem;
+      }
+
+      #publicCode {
+        resize: none;
+        font-size: 2rem;
+        text-align: center;
+        height: 4.4rem;
+        border-top-width: 0;
+        padding: 0;
+        padding-top: 0.5rem;
+        overflow: hidden;
+      }
+      @media (max-width: 290px) {
+        .login {
+          box-shadow: none;
+          border-radius: 0;
+          flex-shrink: 0;
+        }
+
+        body {
+          padding: 0;
+          align-items: stretch;
+          justify-content: stretch;
+          overflow-y: auto;
+        }
+
+        nav {
+          justify-content: center;
+        }
+
+        #publicCodeWrapper,
+        #continue {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="login">
+      <h1>FluffyScratch Auth</h1>
+      <label class="matter-textfield-filled" id="publicCodeWrapper">
+        <textarea id="publicCode" readonly class="matter-textfield-outlined" placeholder=" ">{{publicCode}}</textarea>
+        <span></span>
+      </label>
+      <p id="text">
+        Please copy your code, then click continue.
+      </p>
+      <nav>
+        <button id="continue" class="matter-button-contained">Continue</button>
+      </nav>
+    </div>
+    <footer>
+      <div>
+        FluffyScratch was made with ❤️ by
+        <a href="https://hamptonmoore.com" target="_blank">Hampton</a> and <a href="https://easrng.us.to/">easrng</a>.
+      </div>
+      <div class="disc">
+        FluffyScratch is in no way owned, operated, or endorsed by Scratch or
+        any members of the Scratch Team.
+      </div>
+    </footer>
+    <script>
+      let c = document.querySelector("#publicCode");
+      c.addEventListener("focus", () => c.select());
+      let step = 0;
+      const steps = [
+        () => {
+          c.focus();
+          c.select();
+          try {
+            document.execCommand("copy");
+          } catch (e) {}
+          try {
+            if (
+              !window.open(
+                "https://scratch.mit.edu/projects/514649494/fullscreen/",
+                "fluffyauth"
+              )
+            )
+              throw new Error();
+          } catch (e) {
+            alert("Please enable popups.");
+          }
+          document.querySelector("#publicCodeWrapper").style.display = "none";
+          document.querySelector("#text").textContent =
+            "When you are done, click Log In.";
+          document.querySelector("#continue").textContent = "Log In";
+        },
+        () => {
+          location.href={{nextURL}};
+          document.querySelector("#continue").style.display = "none";
+          document.querySelector("#text").innerHTML =
+            "Redirecting...<br>If you aren't redirected, reload the page and try again.";
+        }
+      ];
+      document.querySelector("#continue").addEventListener("click", () => {
+        steps[step++]();
+      });
+    </script>
+  </body>
 </html>
