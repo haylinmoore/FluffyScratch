@@ -111,8 +111,8 @@ Analytic.sync({ force: false, alter: true })
         "commentID": "86697819",
         "date": 1596294692000,
         "text": "@_RareScratch2_ He doesn’t do F4F.",
-		"parent": "86697361"
-		*/
+        "parent": "86697361"
+        */
 
 const Comment = sequelize.define("comment", {
     username: {
@@ -147,10 +147,10 @@ Comment.sync({ force: false, alter: true })
 
 const Auth = sequelize.define("auth", {
     publicCode: {
-        type: Sequelize.INTEGER,
+        type: Sequelize.BIGINT,
     },
     privateCode: {
-        type: Sequelize.BIGINT,
+        type: Sequelize.STRING(128),
         primaryKey: true,
     },
     redirectLocation: {
@@ -158,7 +158,7 @@ const Auth = sequelize.define("auth", {
     }
 });
 
-Auth.sync({ force: false, alter: true })
+Auth.sync({ force: true, alter: true })
     .then(() => { })
     .catch((err) => {
         console.error(err);
@@ -179,7 +179,7 @@ function syncIDs() {
     });
 }
 
-function cleanupAuth(){
+function cleanupAuth() {
     Auth.destroy({
         where: {
             updatedAt: {

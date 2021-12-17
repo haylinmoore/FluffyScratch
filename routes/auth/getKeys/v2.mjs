@@ -17,9 +17,18 @@ export default async function authGetKeysv2(req, res) {
         "utf-8"
     )
     let url = new URL("https://" + rawurl)
+
+    let publicCodeBits = await randomKey(6)
+    let publicCode = 0;
+    for (let i = 0; i < 6; i++) {
+        publicCode |= publicCodeBits[i] << (i * 8)
+    }
+
+    publicCode = Math.abs(publicCode)
+
     const pageData = {
-        publicCode: (await randomKey(3)).reduce((a, b) => (a + 1) * (b + 1)).toString(),
-        privateCode: ((await randomKey(12)).reduce((a, b) => (a + 1) * (b + 1)) % 100000000000000000).toString(),
+        publicCode: publicCode.toString(),
+        privateCode: (await randomKey(48)).toString('hex'),
         redirectLocation: rawurl
     };
 
