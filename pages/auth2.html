@@ -233,7 +233,7 @@
               document.querySelector("#username").textContent=e.data.username;
               document.querySelector("#avatar").src="https://cdn2.scratch.mit.edu/get_image/user/" + e.data.userId+"_90x90.png";
               document.querySelector(".login").classList.add("oneclick")
-              let ogStep1=steps.pop();
+              steps.pop();
               steps[0]=()=>{
                 document.querySelector("#continue").disabled=true;
                 document.querySelector("#continue").textContent="Loading...";
