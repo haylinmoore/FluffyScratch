@@ -36,6 +36,7 @@
         text-align: center;
         grid-gap: 1rem;
         background: #fff;
+        min-height: 15.25rem;
       }
 
       body,
@@ -82,7 +83,7 @@
       nav {
         width: 100%;
         display: flex;
-        align-items: center;
+        align-items: end;
         justify-content: flex-end;
         padding: 0.5rem;
       }
@@ -146,6 +147,12 @@
       }
       #oneclick p {
         margin: 0.75rem 0 0 0;
+      }
+      .login > :not(h1):not(nav) {
+        transition: opacity 0.25s ease;
+      }
+      .login:not(.oneclick):not(.no-oneclick) > :not(h1):not(nav) {
+        opacity: 0;
       }
     </style>
   </head>
@@ -216,40 +223,52 @@
         steps[step++]();
       });
       let comframe=Object.assign(document.createElement("iframe"), {src:"https://scratch.mit.edu/projects/618552781/embed",style:"width:0;height:0;border:0;margin:0;"});
-      let cancel;
+      let cancelTimeout;
       let hasOneClick=false;
-      comframe.addEventListener("load", () => {
-        if(!hasOneClick) cancel=setTimeout(()=>comframe.remove(), 200)
-      });
-      window.addEventListener("message", function onMessage(e){
-        if(e.data.oneClickFluffyScratchLogin){
-          if(e.data.loaded) {
-            hasOneClick=true;
-            if(typeof cancel !== "undefined") clearTimeout(cancel)
-            console.log("we have 1click")
-          }
-          if(typeof e.data.isLoggedIn !== "undefined") {
-            if(e.data.isLoggedIn) {
-              document.querySelector("#username").textContent=e.data.username;
-              document.querySelector("#avatar").src="https://cdn2.scratch.mit.edu/get_image/user/" + e.data.userId+"_90x90.png";
-              document.querySelector(".login").classList.add("oneclick")
-              steps.pop();
-              steps[0]=()=>{
-                document.querySelector("#continue").disabled=true;
-                document.querySelector("#continue").textContent="Loading...";
-                let key=crypto.getRandomValues(new Uint8Array(8)).join("");
-                localStorage.setItem(key, JSON.stringify({url: nextURL, expiry: Date.now() + 1000 * 60 * 5}))
-                comframe.contentWindow.postMessage({
-                  oneClickFluffyScratchLogin: true,
-                  publicCode: document.querySelector("#publicCode").value,
-                  redirect: location.origin + location.pathname + "?localRedirect=" + key
-                }, "*")
+      const cancel = () => {
+        comframe.remove()
+        const l = document.querySelector(".login").classList;
+        l.add("no-oneclick")
+        l.remove("oneclick")
+      }
+      try {
+        comframe.addEventListener("load", () => {
+          if(!hasOneClick) cancelTimeout=setTimeout(cancel, 200)
+        });
+        window.addEventListener("message", function onMessage(e){
+          if(e.data.oneClickFluffyScratchLogin){
+            if(e.data.loaded) {
+              hasOneClick=true;
+              if(typeof cancelTimeout !== "undefined") clearTimeout(cancelTimeout)
+              console.log("we have 1click")
+            }
+           if(typeof e.data.isLoggedIn !== "undefined") {
+              if(e.data.isLoggedIn) {
+                document.querySelector("#username").textContent=e.data.username;
+                document.querySelector("#avatar").src="https://cdn2.scratch.mit.edu/get_image/user/" + e.data.userId+"_90x90.png";
+                document.querySelector(".login").classList.add("oneclick")
+                steps.pop();
+                steps[0]=()=>{
+                  document.querySelector("#continue").disabled=true;
+                  document.querySelector("#continue").textContent="Loading...";
+                  let key=crypto.getRandomValues(new Uint8Array(8)).join("");
+                  localStorage.setItem(key, JSON.stringify({url: nextURL, expiry: Date.now() + 1000 * 60 * 5}))
+                  comframe.contentWindow.postMessage({
+                    oneClickFluffyScratchLogin: true,
+                    publicCode: document.querySelector("#publicCode").value,
+                    redirect: location.origin + location.pathname + "?localRedirect=" + key
+                  }, "*")
+                }
+              } else {
+                cancel()
               }
             }
           }
-        }
-      })
-      document.body.appendChild(comframe)
+        })
+        document.body.appendChild(comframe)
+      } catch(e) {
+        cancel(); // if the oneclick has an error, fall back to normal.
+      }
     </script>
   </body>
 </html>
