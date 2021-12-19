@@ -1,8 +1,7 @@
-import isValidName from "../../../modules/isValidName.mjs";
 import fs from "fs";
 import crypto from "crypto";
 import { Auth } from "../../../modules/db.mjs";
-import { url } from "inspector";
+import { AUTH_CLOUD_PROJECT } from "../../../modules/consts.mjs";
 
 const randomKey = async (length) => {
     const buffer = await crypto.randomBytes(length);
@@ -43,6 +42,7 @@ export default async function authGetKeysv2(req, res) {
                 pageData[item]
             );
         }
+        authPageHTML = authPageHTML.replace("{{projectID}}", AUTH_CLOUD_PROJECT)
 
         Auth.create(pageData);
 
